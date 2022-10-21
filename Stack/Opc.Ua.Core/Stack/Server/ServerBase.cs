@@ -1,6 +1,6 @@
-/* Copyright (c) 1996-2019 The OPC Foundation. All rights reserved.
+/* Copyright (c) 1996-2022 The OPC Foundation. All rights reserved.
    The source code in this file is covered under a dual-license scenario:
-     - RCL: for OPC Foundation members in good-standing
+     - RCL: for OPC Foundation Corporate Members in good-standing
      - GPL V2: everybody else
    RCL license terms accompanied with this source code. See http://opcfoundation.org/License/RCL/1.00/
    GNU General Public License as published by the Free Software Foundation;
@@ -10,13 +10,19 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 */
 
+// use a thread scheduler with dedicated worker threads
+#define THREAD_SCHEDULER
+
 using System;
 using System.Collections.Generic;
-using System.Security.Cryptography.X509Certificates;
-using System.Threading;
+using System.Globalization;
 using System.Net;
+using System.Security.Cryptography.X509Certificates;
+using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Opc.Ua.Bindings;
+using Opc.Ua.Security.Certificates;
 
 namespace Opc.Ua
 {
@@ -30,30 +36,32 @@ namespace Opc.Ua
         /// Initializes object with default values.
         /// </summary>
         public ServerBase()
-        {            
+        {
             m_messageContext = new ServiceMessageContext();
             m_serverError = new ServiceResult(StatusCodes.BadServerHalted);
-            m_hosts = new List<Task>();
+            m_hosts = new List<ServiceHost>();
             m_listeners = new List<ITransportListener>();
             m_endpoints = null;
             m_requestQueue = new RequestQueue(this, 10, 100, 1000);
+            m_userTokenPolicyId = 0;
         }
         #endregion
-        
+
         #region IDisposable Members
         /// <summary>
         /// Frees any unmanaged resources.
         /// </summary>
         public void Dispose()
-        {   
+        {
             Dispose(true);
+            GC.SuppressFinalize(this);
         }
 
         /// <summary>
         /// An overrideable version of the Dispose.
         /// </summary>
         protected virtual void Dispose(bool disposing)
-        {  
+        {
             if (disposing)
             {
                 // dispose any listeners.
@@ -90,14 +98,14 @@ namespace Opc.Ua
         /// <value>The message context that stores context information associated with a UA 
         /// server that is used during message processing.
         /// </value>
-        public ServiceMessageContext MessageContext 
-        { 
-            get 
-            { 
-                return (ServiceMessageContext)m_messageContext; 
+        public IServiceMessageContext MessageContext
+        {
+            get
+            {
+                return (IServiceMessageContext)m_messageContext;
             }
-            
-            set 
+
+            set
             {
                 Interlocked.Exchange(ref m_messageContext, value);
             }
@@ -108,13 +116,13 @@ namespace Opc.Ua
         /// </summary>
         /// <value>The object that combines the status code and diagnostic info structures.</value>
         public ServiceResult ServerError
-        { 
-            get 
-            { 
-                return (ServiceResult)m_serverError; 
+        {
+            get
+            {
+                return (ServiceResult)m_serverError;
             }
-            
-            set 
+
+            set
             {
                 Interlocked.Exchange(ref m_serverError, value);
             }
@@ -144,25 +152,100 @@ namespace Opc.Ua
         {
             m_requestQueue.ScheduleIncomingRequest(request);
         }
+
+        #region IAuditEventCallback Members
+        /// <inheritdoc/>
+        public virtual void ReportAuditOpenSecureChannelEvent(
+            string globalChannelId,
+            EndpointDescription endpointDescription,
+            OpenSecureChannelRequest request,
+            X509Certificate2 clientCertificate,
+            Exception exception)
+        {
+            // raise an audit open secure channel event.            
+        }
+
+        /// <inheritdoc/>
+        public virtual void ReportAuditCloseSecureChannelEvent(
+            string globalChannelId,
+            Exception exception)
+        {
+            // raise an audit close secure channel event.    
+        }
+
+        /// <inheritdoc/>
+        public virtual void ReportAuditCertificateEvent(
+            X509Certificate2 clientCertificate,
+            Exception exception)
+        {
+            // raise the audit certificate
+        }
+        #endregion
+
         #endregion
 
         #region Public Methods
         /// <summary>
-        /// Starts the server (called from a IIS host process).
+        /// Raised when the status of a monitored connection changes.
+        /// </summary>
+        public event EventHandler<ConnectionStatusEventArgs> ConnectionStatusChanged;
+
+        /// <summary>
+        /// Raised when a connection arrives and is waiting for a callback.
+        /// </summary>
+        protected virtual void OnConnectionStatusChanged(object sender, ConnectionStatusEventArgs e)
+        {
+            ConnectionStatusChanged?.Invoke(sender, e);
+        }
+
+        /// <summary>
+        /// Creates a new connection with a client.
+        /// </summary>
+        public void CreateConnection(Uri url, int timeout)
+        {
+            ITransportListener listener = null;
+
+            Utils.LogInfo("Create Reverse Connection to Client at {0}.", url);
+
+            if (TransportListeners != null)
+            {
+                foreach (var ii in TransportListeners)
+                {
+                    if (ii.UriScheme == url.Scheme)
+                    {
+                        listener = ii;
+                        break;
+                    }
+                }
+            }
+
+            if (listener == null)
+            {
+                throw new ArgumentException("No suitable listener found.", nameof(url));
+            }
+
+            listener.CreateReverseConnection(url, timeout);
+        }
+
+        /// <summary>
+        /// Starts the server.
         /// </summary>
         /// <param name="configuration">The object that stores the configurable configuration information 
         /// for a UA application</param>
         /// <param name="baseAddresses">The array of Uri elements which contains base addresses.</param>
         /// <returns>Returns a host for a UA service.</returns>
-        public Task Start(ApplicationConfiguration configuration, params Uri[] baseAddresses)
+        public ServiceHost Start(ApplicationConfiguration configuration, params Uri[] baseAddresses)
         {
             if (configuration == null) throw new ArgumentNullException(nameof(configuration));
 
             // do any pre-startup processing
             OnServerStarting(configuration);
 
-            // intialize the request queue from the configuration.
+            // initialize the request queue from the configuration.
             InitializeRequestQueue(configuration);
+
+            // create the binding factory.
+            TransportListenerBindings bindingFactory = TransportBindings.Listeners;
 
             // initialize the server capabilities
             ServerCapabilities = configuration.ServerConfiguration.ServerCapabilities;
@@ -174,8 +257,9 @@ namespace Opc.Ua
             ApplicationDescription serverDescription = null;
             EndpointDescriptionCollection endpoints = null;
 
-            IList<Task> hosts = InitializeServiceHosts(
+            IList<ServiceHost> hosts = InitializeServiceHosts(
                 configuration,
+                bindingFactory,
                 out serverDescription,
                 out endpoints);
 
@@ -199,6 +283,7 @@ namespace Opc.Ua
             {
                 for (int ii = 1; ii < hosts.Count; ii++)
                 {
+                    hosts[ii].Open();
                     m_hosts.Add(hosts[ii]);
                 }
             }
@@ -219,8 +304,11 @@ namespace Opc.Ua
             // do any pre-startup processing
             OnServerStarting(configuration);
 
-            // intialize the request queue from the configuration.
+            // initialize the request queue from the configuration.
             InitializeRequestQueue(configuration);
+
+            // create the listener factory.
+            TransportListenerBindings bindingFactory = TransportBindings.Listeners;
 
             // initialize the server capabilities
             ServerCapabilities = configuration.ServerConfiguration.ServerCapabilities;
@@ -232,8 +320,9 @@ namespace Opc.Ua
             ApplicationDescription serverDescription = null;
             EndpointDescriptionCollection endpoints = null;
 
-            IList<Task> hosts = InitializeServiceHosts(
+            IList<ServiceHost> hosts = InitializeServiceHosts(
                 configuration,
+                bindingFactory,
                 out serverDescription,
                 out endpoints);
 
@@ -247,8 +336,9 @@ namespace Opc.Ua
             // open the hosts.
             lock (m_hosts)
             {
-                foreach (Task serviceHost in hosts)
+                foreach (ServiceHost serviceHost in hosts)
                 {
+                    serviceHost.Open();
                     m_hosts.Add(serviceHost);
                 }
             }
@@ -362,7 +452,7 @@ namespace Opc.Ua
             }
 
             return discoveryUrls;
-        }              
+        }
 
         /// <summary>
         /// Initializes the request queue.
@@ -381,7 +471,6 @@ namespace Opc.Ua
                 maxRequestThreadCount = configuration.ServerConfiguration.MaxRequestThreadCount;
                 maxQueuedRequestCount = configuration.ServerConfiguration.MaxQueuedRequestCount;
             }
-
             else if (configuration.DiscoveryServerConfiguration != null)
             {
                 minRequestThreadCount = configuration.DiscoveryServerConfiguration.MinRequestThreadCount;
@@ -390,6 +479,16 @@ namespace Opc.Ua
             }
 
             // ensure configuration errors don't render the server inoperable.
+            if (minRequestThreadCount < 1)
+            {
+                minRequestThreadCount = 1;
+            }
+
+            if (maxRequestThreadCount < minRequestThreadCount)
+            {
+                maxRequestThreadCount = minRequestThreadCount;
+            }
+
             if (maxRequestThreadCount < 100)
             {
                 maxRequestThreadCount = 100;
@@ -399,7 +498,7 @@ namespace Opc.Ua
             {
                 maxQueuedRequestCount = 100;
             }
-            
+
             if (m_requestQueue != null)
             {
                 m_requestQueue.Dispose();
@@ -437,7 +536,7 @@ namespace Opc.Ua
                     }
                     catch (Exception e)
                     {
-                        Utils.Trace(e, "Unexpected error closing a listener. {0}", listeners[ii].GetType().FullName);
+                        Utils.LogError(e, "Unexpected error closing a listener. {0}", listeners[ii].GetType().FullName);
                     }
                 }
 
@@ -447,8 +546,23 @@ namespace Opc.Ua
             // close the hosts.
             lock (m_hosts)
             {
-                m_hosts.Clear();
+                foreach (ServiceHost host in m_hosts)
+                {
+                    if (host.State == ServiceHostState.Opened)
+                    {
+                        host.Abort();
+                    }
+                    host.Close();
+                }
             }
+        }
+
+        /// <summary>
+        /// Creates an instance of the service host.
+        /// </summary>
+        public virtual ServiceHost CreateServiceHost(ServerBase server, params Uri[] addresses)
+        {
+            return null;
         }
         #endregion
 
@@ -489,10 +603,7 @@ namespace Opc.Ua
         /// <summary>
         /// Gets the list of endpoints supported by the server.
         /// </summary>
-        protected ReadOnlyList<EndpointDescription> Endpoints
-        {
-            get { return m_endpoints; }
-        }
+        protected ReadOnlyList<EndpointDescription> Endpoints => m_endpoints;
 
         /// <summary>
         /// The object used to verify client certificates
@@ -517,12 +628,12 @@ namespace Opc.Ua
         /// <value>The instance X.509 certificate.</value>
         protected X509Certificate2 InstanceCertificate
         {
-            get 
-            { 
-                return (X509Certificate2)m_instanceCertificate; 
+            get
+            {
+                return (X509Certificate2)m_instanceCertificate;
             }
-            
-            private set 
+
+            private set
             {
                 m_instanceCertificate = value;
             }
@@ -550,12 +661,12 @@ namespace Opc.Ua
         /// <value>The properties of the current server instance.</value>
         protected ServerProperties ServerProperties
         {
-            get 
-            { 
-                return (ServerProperties)m_serverProperties; 
+            get
+            {
+                return (ServerProperties)m_serverProperties;
             }
-            
-            private set 
+
+            private set
             {
                 m_serverProperties = value;
             }
@@ -567,12 +678,12 @@ namespace Opc.Ua
         /// <value>Object that stores the configurable configuration information for a UA application</value>
         protected ApplicationConfiguration Configuration
         {
-            get 
-            { 
-                return (ApplicationConfiguration)m_configuration; 
+            get
+            {
+                return (ApplicationConfiguration)m_configuration;
             }
-            
-            private set 
+
+            private set
             {
                 m_configuration = value;
             }
@@ -584,15 +695,24 @@ namespace Opc.Ua
         /// <value>Object that contains a description for the ApplicationDescription DataType.</value>
         protected ApplicationDescription ServerDescription
         {
-            get 
-            { 
-                return (ApplicationDescription)m_serverDescription; 
+            get
+            {
+                return (ApplicationDescription)m_serverDescription;
             }
-            
-            private set 
+
+            private set
             {
                 m_serverDescription = value;
             }
+        }
+
+        /// <summary>
+        /// Gets the list of service hosts used by the server instance.
+        /// </summary>
+        /// <value>The service hosts.</value>
+        protected List<ServiceHost> ServiceHosts
+        {
+            get { return m_hosts; }
         }
 
         /// <summary>
@@ -604,10 +724,7 @@ namespace Opc.Ua
         /// Gets the list of transport listeners used by the server instance.
         /// </summary>
         /// <value>The transport listeners.</value>
-        protected List<ITransportListener> TransportListeners
-        {
-            get { return m_listeners; }
-        }
+        protected List<ITransportListener> TransportListeners => m_listeners;
         #endregion
 
         #region Protected Methods
@@ -631,19 +748,23 @@ namespace Opc.Ua
         /// Specifies if the server requires encryption; if so the server needs to send its certificate to the clients and validate the client certificates
         /// </summary>
         /// <param name="description">The description.</param>
-        /// <returns></returns>
         public static bool RequireEncryption(EndpointDescription description)
         {
-            bool requireEncryption = description.SecurityPolicyUri != SecurityPolicies.None;
+            bool requireEncryption = false;
 
-            if (!requireEncryption)
+            if (description != null)
             {
-                foreach (UserTokenPolicy userTokenPolicy in description.UserIdentityTokens)
+                requireEncryption = description.SecurityPolicyUri != SecurityPolicies.None;
+
+                if (!requireEncryption)
                 {
-                    if (userTokenPolicy.SecurityPolicyUri != SecurityPolicies.None)
+                    foreach (UserTokenPolicy userTokenPolicy in description.UserIdentityTokens)
                     {
-                        requireEncryption = true;
-                        break;
+                        if (userTokenPolicy.SecurityPolicyUri != SecurityPolicies.None)
+                        {
+                            requireEncryption = true;
+                            break;
+                        }
                     }
                 }
             }
@@ -659,294 +780,71 @@ namespace Opc.Ua
             InstanceCertificate = e.SecurityConfiguration.ApplicationCertificate.Certificate;
             foreach (var listener in TransportListeners)
             {
-                UaTcpChannelListener tcpListener = listener as UaTcpChannelListener;
-                if (tcpListener != null)
-                {
-                    tcpListener.CertificateUpdate(e.CertificateValidator, InstanceCertificate, null);
-                    continue;
-                }
-#if !NO_HTTPS
-                UaHttpsChannelListener httpsListener = listener as UaHttpsChannelListener;
-                if (httpsListener != null)
-                {
-                    httpsListener.CertificateUpdate(e.CertificateValidator, InstanceCertificate, null);
-                    continue;
-                }
-#endif
+                listener.CertificateUpdate(e.CertificateValidator, InstanceCertificate, null);
             }
         }
 
         /// <summary>
-        /// Create a new service host for UA TCP.
+        /// Create the transport listener for the service host endpoint.
         /// </summary>
-        protected List<EndpointDescription> CreateUaTcpServiceHost(
-            IDictionary<string, Task> hosts,
-            ApplicationConfiguration configuration,
-            IList<string> baseAddresses,
-            ApplicationDescription serverDescription,
-            List<ServerSecurityPolicy> securityPolicies)
+        /// <param name="endpointUri">The endpoint Uri.</param>
+        /// <param name="endpoints">The description of the endpoints.</param>
+        /// <param name="endpointConfiguration">The configuration of the endpoints.</param>
+        /// <param name="listener">The transport listener.</param>
+        /// <param name="certificateValidator">The certificate validator for the transport.</param>
+        public virtual void CreateServiceHostEndpoint(
+            Uri endpointUri,
+            EndpointDescriptionCollection endpoints,
+            EndpointConfiguration endpointConfiguration,
+            ITransportListener listener,
+            ICertificateValidator certificateValidator
+            )
         {
-            // generate a unique host name.
-            string hostName = String.Empty;
-
-            if (hosts.ContainsKey(hostName))
+            // create the stack listener.
+            try
             {
-                hostName = "/Tcp";
-            }
+                TransportListenerSettings settings = new TransportListenerSettings();
 
-            if (hosts.ContainsKey(hostName))
+                settings.Descriptions = endpoints;
+                settings.Configuration = endpointConfiguration;
+                settings.ServerCertificate = InstanceCertificate;
+                settings.CertificateValidator = certificateValidator;
+                settings.NamespaceUris = MessageContext.NamespaceUris;
+                settings.Factory = MessageContext.Factory;
+
+                listener.Open(
+                   endpointUri,
+                   settings,
+                   GetEndpointInstance(this));
+
+                TransportListeners.Add(listener);
+
+                listener.ConnectionStatusChanged += OnConnectionStatusChanged;
+            }
+            catch (Exception e)
             {
-                hostName += Utils.Format("/{0}", hosts.Count);
+                StringBuilder message = new StringBuilder();
+                message.Append("Could not load ").Append(endpointUri.Scheme).Append(" Stack Listener.");
+                if (e.InnerException != null)
+                {
+                    message.Append(' ')
+                        .Append(e.InnerException.Message);
+                }
+                Utils.LogError(e, message.ToString());
+                throw;
             }
-
-            // build list of uris.
-            List<Uri> uris = new List<Uri>();
-            EndpointDescriptionCollection endpoints = new EndpointDescriptionCollection();
-
-            // create the endpoint configuration to use.
-            EndpointConfiguration endpointConfiguration = EndpointConfiguration.Create(configuration);
-            string computerName = Utils.GetHostName();
-
-            for (int ii = 0; ii < baseAddresses.Count; ii++)
-            {
-                // UA TCP and HTTPS endpoints support multiple policies.
-                if (!baseAddresses[ii].StartsWith(Utils.UriSchemeOpcTcp, StringComparison.Ordinal))
-                {
-                    continue;
-                }
-
-                UriBuilder uri = new UriBuilder(baseAddresses[ii]);
-
-                if (String.Compare(uri.Host, "localhost", StringComparison.OrdinalIgnoreCase) == 0)
-                {
-                    uri.Host = computerName;
-                }
-
-                uris.Add(uri.Uri);
-
-                foreach (ServerSecurityPolicy policy in securityPolicies)
-                {
-                    // create the endpoint description.
-                    EndpointDescription description = new EndpointDescription();
-
-                    description.EndpointUrl = uri.ToString();
-                    description.Server = serverDescription;
-
-                    description.SecurityMode = policy.SecurityMode;
-                    description.SecurityPolicyUri = policy.SecurityPolicyUri;
-                    description.SecurityLevel = ServerSecurityPolicy.CalculateSecurityLevel(policy.SecurityMode, policy.SecurityPolicyUri);
-                    description.UserIdentityTokens = GetUserTokenPolicies( configuration, description );
-                    description.TransportProfileUri = Profiles.UaTcpTransport;
-
-                    bool requireEncryption = RequireEncryption(description);
-                    
-                    if (requireEncryption)
-                    {
-                        description.ServerCertificate = InstanceCertificate.RawData;
-
-                        // check if complete chain should be sent.
-                        if (configuration.SecurityConfiguration.SendCertificateChain && InstanceCertificateChain != null && InstanceCertificateChain.Count >0)
-                        {
-                            List<byte> serverCertificateChain = new List<byte>();
-
-                            for (int i = 0; i < InstanceCertificateChain.Count; i++)
-                            {
-                                serverCertificateChain.AddRange(InstanceCertificateChain[i].RawData);
-                            }
-
-                            description.ServerCertificate = serverCertificateChain.ToArray();
-                        }
-                    }
-
-                    endpoints.Add( description );
-                }
-
-                // create the UA-TCP stack listener.
-                try
-                {
-                    TransportListenerSettings settings = new TransportListenerSettings();
-
-                    settings.Descriptions = endpoints;
-                    settings.Configuration = endpointConfiguration;
-                    settings.CertificateValidator = configuration.CertificateValidator.GetChannelValidator();
-                    settings.NamespaceUris = this.MessageContext.NamespaceUris;
-                    settings.Factory = this.MessageContext.Factory;
-                    settings.ServerCertificate = this.InstanceCertificate;
-
-                    if (configuration.SecurityConfiguration.SendCertificateChain)
-                    {
-                        settings.ServerCertificateChain = this.InstanceCertificateChain;
-                    }
-
-                    ITransportListener listener = new Opc.Ua.Bindings.UaTcpChannelListener();
-
-                    listener.Open(
-                       uri.Uri,
-                       settings,
-                       GetEndpointInstance(this));
-
-                    TransportListeners.Add(listener);
-                }
-                catch (Exception e)
-                {
-                    Utils.Trace(e, "Could not load UA-TCP Stack Listener.");
-                    throw;
-                }
-            }
-
-            return endpoints;
         }
-
-#if !NO_HTTPS
-        /// <summary>
-        /// Create a new service host for UA HTTPS.
-        /// </summary>
-        protected List<EndpointDescription> CreateHttpsServiceHost(
-            IDictionary<string, Task> hosts,
-            ApplicationConfiguration configuration,
-            IList<string> baseAddresses,
-            ApplicationDescription serverDescription,
-            List<ServerSecurityPolicy> securityPolicies)
-        {
-            // generate a unique host name.
-            string hostName = String.Empty;
-
-            if (hosts.ContainsKey(hostName))
-            {
-                hostName = "/Https";
-            }
-
-            if (hosts.ContainsKey(hostName))
-            {
-                hostName += Utils.Format("/{0}", hosts.Count);
-            }
-
-            // build list of uris.
-            List<Uri> uris = new List<Uri>();
-            EndpointDescriptionCollection endpoints = new EndpointDescriptionCollection();
-
-            // create the endpoint configuration to use.
-            EndpointConfiguration endpointConfiguration = EndpointConfiguration.Create(configuration);
-            string computerName = Utils.GetHostName();
-
-            for (int ii = 0; ii < baseAddresses.Count; ii++)
-            {
-                if (!baseAddresses[ii].StartsWith(Utils.UriSchemeHttps, StringComparison.Ordinal))
-                {
-                    continue;
-                }
-
-                UriBuilder uri = new UriBuilder(baseAddresses[ii]);
-
-                if (uri.Path[uri.Path.Length-1] != '/')
-                {
-                    uri.Path += "/";
-                }
-
-                if (String.Compare(uri.Host, "localhost", StringComparison.OrdinalIgnoreCase) == 0)
-                {
-                    uri.Host = computerName;
-                }
-
-                uris.Add(uri.Uri);
-
-                if (uri.Scheme == Utils.UriSchemeHttps)
-                {
-                    // Can only support one policy with HTTPS
-                    // So pick the first policy with security mode sign and encrypt
-                    ServerSecurityPolicy bestPolicy = null;
-                    foreach (ServerSecurityPolicy policy in securityPolicies)
-                    {
-                        if (policy.SecurityMode != MessageSecurityMode.SignAndEncrypt)
-                        {
-                            continue;
-                        }
-
-                        bestPolicy = policy;
-                        break;
-                    }
-
-                    // Pick the first policy from the list if no policies with sign and encrypt defined
-                    if (bestPolicy == null)
-                    {
-                        bestPolicy = securityPolicies[0];
-                    }
-
-                    EndpointDescription description = new EndpointDescription();
-
-                    description.EndpointUrl = uri.ToString();
-                    description.Server = serverDescription;
-
-                    if (InstanceCertificate != null)
-                    {
-                        description.ServerCertificate = InstanceCertificate.RawData;
-
-                        // check if complete chain should be sent.
-                        if (configuration.SecurityConfiguration.SendCertificateChain && InstanceCertificateChain != null && InstanceCertificateChain.Count > 0)
-                        {
-                            List<byte> serverCertificateChain = new List<byte>();
-
-                            for (int i = 0; i < InstanceCertificateChain.Count; i++)
-                            {
-                                serverCertificateChain.AddRange(InstanceCertificateChain[i].RawData);
-                            }
-
-                            description.ServerCertificate = serverCertificateChain.ToArray();
-                        }
-                    }
-
-                    description.SecurityMode = bestPolicy.SecurityMode;
-                    description.SecurityPolicyUri = bestPolicy.SecurityPolicyUri;
-                    description.SecurityLevel = ServerSecurityPolicy.CalculateSecurityLevel(bestPolicy.SecurityMode, bestPolicy.SecurityPolicyUri);
-                    description.UserIdentityTokens = GetUserTokenPolicies(configuration, description);
-                    description.TransportProfileUri = Profiles.HttpsBinaryTransport;
-
-                    endpoints.Add(description);
-                }
-
-                // create the stack listener.
-                try
-                {
-                    TransportListenerSettings settings = new TransportListenerSettings();
-
-                    settings.Descriptions = endpoints;
-                    settings.Configuration = endpointConfiguration;
-                    settings.ServerCertificate = this.InstanceCertificate;
-                    settings.CertificateValidator = configuration.CertificateValidator.GetChannelValidator();
-                    settings.NamespaceUris = this.MessageContext.NamespaceUris;
-                    settings.Factory = this.MessageContext.Factory;
-
-                    ITransportListener listener = new Opc.Ua.Bindings.UaHttpsChannelListener();
-
-                    listener.Open(
-                       uri.Uri,
-                       settings,
-                       GetEndpointInstance(this));
-
-                    TransportListeners.Add(listener);
-                }
-                catch (Exception e)
-                {
-                    string message = "Could not load HTTPS Stack Listener.";
-                    if (e.InnerException != null)
-                    {
-                        message += (" " + e.InnerException.Message);
-                    }
-                    Utils.Trace(e, message);
-                }
-            }
-
-            return endpoints;
-        }
-#endif
 
         /// <summary>
         /// Returns the UserTokenPolicies supported by the server.
         /// </summary>
         /// <param name="configuration">The configuration.</param>
         /// <param name="description">The description.</param>
-        /// <returns>Returns a collection of UserTokenPolicy objects, the return type is <seealso cref="UserTokenPolicyCollection"/> . </returns>
-        protected virtual UserTokenPolicyCollection GetUserTokenPolicies(ApplicationConfiguration configuration, EndpointDescription description)
+        /// <returns>
+        /// Returns a collection of UserTokenPolicy objects,
+        /// the return type is <seealso cref="UserTokenPolicyCollection"/> .
+        /// </returns>
+        public virtual UserTokenPolicyCollection GetUserTokenPolicies(ApplicationConfiguration configuration, EndpointDescription description)
         {
             UserTokenPolicyCollection policies = new UserTokenPolicyCollection();
 
@@ -957,28 +855,29 @@ namespace Opc.Ua
 
             foreach (UserTokenPolicy policy in configuration.ServerConfiguration.UserTokenPolicies)
             {
-                // ensure a security policy is specified for user tokens.
-                if (description.SecurityMode == MessageSecurityMode.None)
+                UserTokenPolicy clone = (UserTokenPolicy)policy.MemberwiseClone();
+
+                if (String.IsNullOrEmpty(policy.SecurityPolicyUri))
                 {
-                    if (String.IsNullOrEmpty(policy.SecurityPolicyUri))
+                    if (description.SecurityMode == MessageSecurityMode.None)
                     {
-                        UserTokenPolicy clone = (UserTokenPolicy)policy.MemberwiseClone();
-                        clone.SecurityPolicyUri = SecurityPolicies.Basic256;
-                        policies.Add(clone);
-                        continue;
+                        if (clone.TokenType == UserTokenType.Anonymous)
+                        {
+                            // no need for security with anonymous token
+                            clone.SecurityPolicyUri = SecurityPolicies.None;
+                        }
+                        else
+                        {
+                            // ensure a security policy is specified for user tokens.
+                            clone.SecurityPolicyUri = SecurityPolicies.Basic256Sha256;
+                        }
                     }
                 }
 
-                policies.Add(policy);
-            }
-
-            // ensure each policy has a unique id.
-            for (int ii = 0; ii < policies.Count; ii++)
-            {
-                if (String.IsNullOrEmpty(policies[ii].PolicyId))
-                {
-                    policies[ii].PolicyId = Utils.Format("{0}", ii);
-                }
+                // ensure each policy has a unique id within the context of the Server
+                clone.PolicyId = Utils.Format("{0}", ++m_userTokenPolicyId);
+                
+                policies.Add(clone);
             }
 
             return policies;
@@ -989,44 +888,66 @@ namespace Opc.Ua
         /// </summary>
         /// <param name="hostname">The hostname.</param>
         /// <returns>The hostname to use for URL filtering.</returns>
-        protected async Task<string> NormalizeHostname(string hostname)
+        protected string NormalizeHostname(string hostname)
         {
             string computerName = Utils.GetHostName();
 
             // substitute the computer name for localhost if localhost used by client.
             if (Utils.AreDomainsEqual(hostname, "localhost"))
             {
-                return computerName.ToUpper();
+                return computerName.ToUpper(CultureInfo.InvariantCulture);
             }
-
 
             // check if client is using an ip address.
             IPAddress address = null;
 
-            if (System.Net.IPAddress.TryParse(hostname, out address))
+            if (IPAddress.TryParse(hostname, out address))
             {
-                if (System.Net.IPAddress.IsLoopback(address))
+                if (IPAddress.IsLoopback(address))
                 {
-                    return computerName.ToUpper();
+                    return computerName.ToUpper(CultureInfo.InvariantCulture);
                 }
 
                 // substitute the computer name for any local IP if an IP is used by client.
-                IPAddress[] addresses = await Utils.GetHostAddresses(Utils.GetHostName());
+                IPAddress[] addresses = Utils.GetHostAddresses(Utils.GetHostName());
 
                 for (int ii = 0; ii < addresses.Length; ii++)
                 {
                     if (addresses[ii].Equals(address))
                     {
-                        return computerName.ToUpper();
+                        return computerName.ToUpper(CultureInfo.InvariantCulture);
                     }
                 }
 
                 // not a localhost IP address.
-                return hostname.ToUpper();
+                return hostname.ToUpper(CultureInfo.InvariantCulture);
+            }
+
+            // check for aliases.
+            IPHostEntry entry = null;
+
+            try
+            {
+                entry = Dns.GetHostEntry(computerName);
+            }
+            catch (System.Net.Sockets.SocketException e)
+            {
+                Utils.LogError(e, "Unable to check aliases for hostname {0}.", computerName);
+            }
+
+            if (entry != null)
+            {
+                for (int ii = 0; ii < entry.Aliases.Length; ii++)
+                {
+                    if (Utils.AreDomainsEqual(hostname, entry.Aliases[ii]))
+                    {
+                        return computerName.ToUpper(CultureInfo.InvariantCulture);
+                    }
+                }
             }
 
             // return normalized hostname.
-            return hostname.ToUpper();
+            return hostname.ToUpper(CultureInfo.InvariantCulture);
         }
 
         /// <summary>
@@ -1084,7 +1005,7 @@ namespace Opc.Ua
                     {
                         if (alternateUrl.DnsSafeHost == endpointUrl.DnsSafeHost)
                         {
-                            accessibleAddresses.Add(baseAddress);
+                            accessibleAddresses.Add(new BaseAddress() { Url = alternateUrl, ProfileUri = baseAddress.ProfileUri, DiscoveryUrl = alternateUrl });
                             break;
                         }
                     }
@@ -1110,7 +1031,7 @@ namespace Opc.Ua
         /// <summary>
         /// Returns the best discovery URL for the base address based on the URL used by the client.
         /// </summary>
-        private string GetBestDiscoveryUrl(Uri clientUrl, BaseAddress baseAddress)
+        private static string GetBestDiscoveryUrl(Uri clientUrl, BaseAddress baseAddress)
         {
             string url = baseAddress.Url.ToString();
 
@@ -1192,7 +1113,7 @@ namespace Opc.Ua
                     {
                         translateHttpsEndpoint = true;
                     }
-                    
+
                     if (endpoint.TransportProfileUri != baseAddress.ProfileUri && !translateHttpsEndpoint)
                     {
                         continue;
@@ -1202,12 +1123,18 @@ namespace Opc.Ua
                     {
                         continue;
                     }
-                            
+
+                    if (endpointUrl.Port != baseAddress.Url.Port)
+                    {
+                        continue;
+                    }
+
                     EndpointDescription translation = new EndpointDescription();
 
                     translation.EndpointUrl = baseAddress.Url.ToString();
 
-                    if (endpointUrl.Path.StartsWith(baseAddress.Url.PathAndQuery) && endpointUrl.Path.Length > baseAddress.Url.PathAndQuery.Length)
+                    if (endpointUrl.Path.StartsWith(baseAddress.Url.PathAndQuery, StringComparison.Ordinal) &&
+                        endpointUrl.Path.Length > baseAddress.Url.PathAndQuery.Length)
                     {
                         string suffix = endpointUrl.Path.Substring(baseAddress.Url.PathAndQuery.Length);
                         translation.EndpointUrl += suffix;
@@ -1257,7 +1184,7 @@ namespace Opc.Ua
 
             ResponseHeader responseHeader = new ResponseHeader();
 
-            responseHeader.Timestamp     = DateTime.UtcNow;
+            responseHeader.Timestamp = DateTime.UtcNow;
             responseHeader.RequestHandle = requestHeader.RequestHandle;
 
             return responseHeader;
@@ -1273,13 +1200,13 @@ namespace Opc.Ua
         {
             ResponseHeader responseHeader = new ResponseHeader();
 
-            responseHeader.Timestamp     = DateTime.UtcNow;
+            responseHeader.Timestamp = DateTime.UtcNow;
             responseHeader.RequestHandle = requestHeader.RequestHandle;
-                        
+
             StringTable stringTable = new StringTable();
             responseHeader.ServiceDiagnostics = new DiagnosticInfo(exception, (DiagnosticsMasks)requestHeader.ReturnDiagnostics, true, stringTable);
             responseHeader.StringTable = stringTable.ToArray();
-            
+
             return responseHeader;
         }
 
@@ -1293,11 +1220,11 @@ namespace Opc.Ua
         {
             ResponseHeader responseHeader = new ResponseHeader();
 
-            responseHeader.Timestamp     = DateTime.UtcNow;
+            responseHeader.Timestamp = DateTime.UtcNow;
             responseHeader.RequestHandle = requestHeader.RequestHandle;
 
             responseHeader.StringTable.AddRange(stringTable.ToArray());
-               
+
             return responseHeader;
         }
 
@@ -1345,7 +1272,7 @@ namespace Opc.Ua
             // load the instance certificate.
             if (configuration.SecurityConfiguration.ApplicationCertificate != null)
             {
-                InstanceCertificate = configuration.SecurityConfiguration.ApplicationCertificate.Find(true).Result;
+                InstanceCertificate = configuration.SecurityConfiguration.ApplicationCertificate.Find(true).GetAwaiter().GetResult();
             }
 
             if (InstanceCertificate == null)
@@ -1373,12 +1300,14 @@ namespace Opc.Ua
             }
 
             // use the message context from the configuration to ensure the channels are using the same one.
-            MessageContext = configuration.CreateMessageContext();
+            ServiceMessageContext messageContext = configuration.CreateMessageContext(true);
+            messageContext.NamespaceUris = new NamespaceTable();
+            MessageContext = messageContext;
 
             // assign a unique identifier if none specified.
             if (String.IsNullOrEmpty(configuration.ApplicationUri))
             {
-                configuration.ApplicationUri = Utils.GetApplicationUriFromCertificate(InstanceCertificate);
+                configuration.ApplicationUri = X509Utils.GetApplicationUriFromCertificate(InstanceCertificate);
 
                 if (String.IsNullOrEmpty(configuration.ApplicationUri))
                 {
@@ -1391,7 +1320,6 @@ namespace Opc.Ua
             }
 
             // initialize namespace table.
-            MessageContext.NamespaceUris = new NamespaceTable();
             MessageContext.NamespaceUris.Append(configuration.ApplicationUri);
 
             // assign an instance name.
@@ -1408,17 +1336,19 @@ namespace Opc.Ua
         /// Creates the endpoints and creates the hosts.
         /// </summary>
         /// <param name="configuration">The object that stores the configurable configuration information for a UA application.</param>
+        /// <param name="bindingFactory">The object of a class that manages a mapping between a URL scheme and a listener.</param>
         /// <param name="serverDescription">The object of the class that contains a description for the ApplicationDescription DataType.</param>
         /// <param name="endpoints">The collection of <see cref="EndpointDescription"/> objects.</param>
         /// <returns>Returns list of hosts for a UA service.</returns>
-        protected virtual IList<Task> InitializeServiceHosts(
-            ApplicationConfiguration          configuration, 
-            out ApplicationDescription        serverDescription,
-            out EndpointDescriptionCollection endpoints)            
+        protected virtual IList<ServiceHost> InitializeServiceHosts(
+            ApplicationConfiguration configuration,
+            TransportListenerBindings bindingFactory,
+            out ApplicationDescription serverDescription,
+            out EndpointDescriptionCollection endpoints)
         {
             serverDescription = null;
             endpoints = null;
-            return new List<Task>();
+            return new List<ServiceHost>();
         }
 
         /// <summary>
@@ -1452,19 +1382,19 @@ namespace Opc.Ua
         /// </summary>
         /// <param name="request">The request.</param>
         /// <param name="calldata">The calldata passed with the request.</param>
-        protected virtual void ProcessRequest(IEndpointIncomingRequest request)
+        protected virtual void ProcessRequest(IEndpointIncomingRequest request, object calldata)
         {
             request.CallSynchronously();
         }
-#endregion
+        #endregion
 
-#region RequestQueue Class
+        #region RequestQueue Class
         /// <summary>
         /// Manages a queue of requests.
         /// </summary>
         protected class RequestQueue : IDisposable
         {
-#region Constructors
+            #region Constructors
             /// <summary>
             /// Initializes a new instance of the <see cref="RequestQueue"/> class.
             /// </summary>
@@ -1476,10 +1406,31 @@ namespace Opc.Ua
             {
                 m_server = server;
                 m_stopped = false;
-            }
-#endregion
+                m_minThreadCount = minThreadCount;
+                m_maxThreadCount = maxThreadCount;
+                m_maxRequestCount = maxRequestCount;
+                m_activeThreadCount = 0;
 
-#region IDisposable Members
+#if THREAD_SCHEDULER
+                m_queue = new Queue<IEndpointIncomingRequest>();
+                m_totalThreadCount = 0;
+#endif
+
+                // adjust ThreadPool, only increase values if necessary
+                int minCompletionPortThreads;
+                ThreadPool.GetMinThreads(out minThreadCount, out minCompletionPortThreads);
+                ThreadPool.SetMinThreads(
+                    Math.Max(minThreadCount, m_minThreadCount),
+                    Math.Max(minCompletionPortThreads, m_minThreadCount));
+                int maxCompletionPortThreads;
+                ThreadPool.GetMaxThreads(out maxThreadCount, out maxCompletionPortThreads);
+                ThreadPool.SetMaxThreads(
+                    Math.Max(maxThreadCount, m_maxThreadCount),
+                    Math.Max(maxCompletionPortThreads, m_maxThreadCount));
+            }
+            #endregion
+
+            #region IDisposable Members
             /// <summary>
             /// Frees any unmanaged resources.
             /// </summary>
@@ -1495,42 +1446,187 @@ namespace Opc.Ua
             {
                 if (disposing)
                 {
+#if THREAD_SCHEDULER
+                    lock (m_lock)
+                    {
+                        m_stopped = true;
+
+                        Monitor.PulseAll(m_lock);
+
+                        m_queue.Clear();
+                    }
+#else
                     m_stopped = true;
+#endif
                 }
             }
-#endregion
+            #endregion
 
-#region Public Members
+            #region Public Members
             /// <summary>
             /// Schedules an incoming request.
             /// </summary>
             /// <param name="request">The request.</param>
             public void ScheduleIncomingRequest(IEndpointIncomingRequest request)
             {
+#if THREAD_SCHEDULER
+                int totalThreadCount;
+                int activeThreadCount;
+
+                // Queue the request. Call logger only outside lock.
+                Monitor.Enter(m_lock);
+                bool monitorExit = true;
+                try
+                {
+                    // check able to schedule requests.
+                    if (m_stopped || m_queue.Count >= m_maxRequestCount)
+                    {
+                        // too many operations
+                        totalThreadCount = m_totalThreadCount;
+                        activeThreadCount = m_activeThreadCount;
+                        monitorExit = false;
+                        Monitor.Exit(m_lock);
+
+                        request.OperationCompleted(null, StatusCodes.BadTooManyOperations);
+
+                        Utils.LogTrace("Too many operations. Total: {0} Active: {1}",
+                            totalThreadCount, activeThreadCount);
+                    }
+                    else
+                    {
+                        m_queue.Enqueue(request);
+
+                        // wake up an idle thread to handle the request if there is one
+                        if (m_activeThreadCount < m_totalThreadCount)
+                        {
+                            Monitor.Pulse(m_lock);
+                        }
+                        // start a new thread to handle the request if none are idle and the pool is not full.
+                        else if (m_totalThreadCount < m_maxThreadCount)
+                        {
+                            totalThreadCount = ++m_totalThreadCount;
+                            activeThreadCount = ++m_activeThreadCount;
+                            monitorExit = false;
+                            Monitor.Exit(m_lock);
+
+                            // new threads start in an active state
+                            Thread thread = new Thread(OnProcessRequestQueue);
+                            thread.IsBackground = true;
+                            thread.Start(null);
+
+                            Utils.LogTrace("Thread created: {0:X8}. Total: {1} Active: {2}",
+                                thread.ManagedThreadId, totalThreadCount, activeThreadCount);
+
+                            return;
+                        }
+                    }
+                }
+                finally
+                {
+                    if (monitorExit)
+                    {
+                        Monitor.Exit(m_lock);
+                    }
+                }
+#else
                 if (m_stopped)
                 {
                     request.OperationCompleted(null, StatusCodes.BadTooManyOperations);
+                    return;
                 }
-                else
+
+                int activeThreadCount = Interlocked.Increment(ref m_activeThreadCount);
+                if (activeThreadCount >= m_maxRequestCount)
                 {
-                    Task.Run(() =>
+                    Interlocked.Decrement(ref m_activeThreadCount);
+                    request.OperationCompleted(null, StatusCodes.BadTooManyOperations);
+                    Utils.LogWarning("Too many operations. Active thread count: {0}", m_activeThreadCount);
+                    return;
+                }
+
+                Task.Run(() => {
+                    try
                     {
-                        m_server.ProcessRequest(request);
-                    });
+                        m_server.ProcessRequest(request, null);
+                    }
+                    finally
+                    {
+                        Interlocked.Decrement(ref m_activeThreadCount);
+                    }
+                });
+#endif
+            }
+            #endregion
+
+            #region Private Methods
+#if THREAD_SCHEDULER
+            /// <summary>
+            /// Processes the requests in the request queue.
+            /// </summary>
+            private void OnProcessRequestQueue(object state)
+            {
+                lock (m_lock)   // i.e. Monitor.Enter(m_lock)
+                {
+                    while (true)
+                    {
+                        // check if the queue is empty.
+                        while (m_queue.Count == 0)
+                        {
+                            m_activeThreadCount--;
+
+                            // wait for a request. end the thread if no activity.
+                            if (m_stopped || (!Monitor.Wait(m_lock, 30000) && m_totalThreadCount > m_minThreadCount))
+                            {
+                                m_totalThreadCount--;
+                                Utils.LogTrace("Thread ended: {0:X8}. Total: {1} Active: {2}",
+                                    Environment.CurrentManagedThreadId, m_totalThreadCount, m_activeThreadCount);
+                                return;
+                            }
+
+                            m_activeThreadCount++;
+                        }
+
+                        IEndpointIncomingRequest request = m_queue.Dequeue();
+
+                        Monitor.Exit(m_lock);
+
+                        try
+                        {
+                            // process the request.
+                            m_server.ProcessRequest(request, state);
+                        }
+                        catch (Exception e)
+                        {
+                            Utils.LogError(e, "Unexpected error processing incoming request.");
+                        }
+                        finally
+                        {
+                            Monitor.Enter(m_lock);
+                        }
+                    }
                 }
             }
-#endregion
+#endif
+            #endregion
 
-#region Private Fields
+            #region Private Fields
             private ServerBase m_server;
             private bool m_stopped;
-#endregion
+            private int m_activeThreadCount;
+            private int m_maxThreadCount;
+            private int m_minThreadCount;
+            private int m_maxRequestCount;
+#if THREAD_SCHEDULER
+            private object m_lock = new object();
+            private Queue<IEndpointIncomingRequest> m_queue;
+            private int m_totalThreadCount;
+#endif
+            #endregion
 
         }
+        #endregion
 
-#endregion
-
-#region Private Fields
+        #region Private Fields
         private object m_messageContext;
         private object m_serverError;
         private object m_certificateValidator;
@@ -1539,10 +1635,12 @@ namespace Opc.Ua
         private object m_serverProperties;
         private object m_configuration;
         private object m_serverDescription;
-        private List<Task> m_hosts;
+        private List<ServiceHost> m_hosts;
         private List<ITransportListener> m_listeners;
         private ReadOnlyList<EndpointDescription> m_endpoints;
         private RequestQueue m_requestQueue;
-#endregion
+        // identifier for the UserTokenPolicy should be unique within the context of a single Server
+        private int m_userTokenPolicyId = 0;
+        #endregion
     }
 }

@@ -1,5 +1,5 @@
 /* ========================================================================
- * Copyright (c) 2005-2019 The OPC Foundation, Inc. All rights reserved.
+ * Copyright (c) 2005-2022 The OPC Foundation, Inc. All rights reserved.
  *
  * OPC Foundation MIT License 1.00
  * 
@@ -476,6 +476,16 @@ namespace Opc.Ua.Gds
         public const uint CertificateDirectoryType_GetCertificateStatus = 222;
 
         /// <summary>
+        /// The identifier for the KeyCredentialManagementFolderType_ServiceName_Placeholder_StartRequest Method.
+        /// </summary>
+        public const uint KeyCredentialManagementFolderType_ServiceName_Placeholder_StartRequest = 168;
+
+        /// <summary>
+        /// The identifier for the KeyCredentialManagementFolderType_ServiceName_Placeholder_FinishRequest Method.
+        /// </summary>
+        public const uint KeyCredentialManagementFolderType_ServiceName_Placeholder_FinishRequest = 196;
+
+        /// <summary>
         /// The identifier for the KeyCredentialManagement_ServiceName_Placeholder_StartRequest Method.
         /// </summary>
         public const uint KeyCredentialManagement_ServiceName_Placeholder_StartRequest = 1012;
@@ -499,6 +509,11 @@ namespace Opc.Ua.Gds
         /// The identifier for the KeyCredentialServiceType_Revoke Method.
         /// </summary>
         public const uint KeyCredentialServiceType_Revoke = 1029;
+
+        /// <summary>
+        /// The identifier for the AuthorizationServicesFolderType_ServiceName_Placeholder_GetServiceDescription Method.
+        /// </summary>
+        public const uint AuthorizationServicesFolderType_ServiceName_Placeholder_GetServiceDescription = 238;
 
         /// <summary>
         /// The identifier for the AuthorizationServices_ServiceName_Placeholder_GetServiceDescription Method.
@@ -986,9 +1001,19 @@ namespace Opc.Ua.Gds
         public const uint CertificateDirectoryType_CertificateGroups_DefaultUserTokenGroup_TrustList = 581;
 
         /// <summary>
+        /// The identifier for the KeyCredentialManagementFolderType_ServiceName_Placeholder Object.
+        /// </summary>
+        public const uint KeyCredentialManagementFolderType_ServiceName_Placeholder = 61;
+
+        /// <summary>
         /// The identifier for the KeyCredentialManagement Object.
         /// </summary>
         public const uint KeyCredentialManagement = 1008;
+
+        /// <summary>
+        /// The identifier for the AuthorizationServicesFolderType_ServiceName_Placeholder Object.
+        /// </summary>
+        public const uint AuthorizationServicesFolderType_ServiceName_Placeholder = 234;
 
         /// <summary>
         /// The identifier for the AuthorizationServices Object.
@@ -1091,6 +1116,11 @@ namespace Opc.Ua.Gds
         public const uint CertificateDeliveredAuditEventType = 109;
 
         /// <summary>
+        /// The identifier for the KeyCredentialManagementFolderType ObjectType.
+        /// </summary>
+        public const uint KeyCredentialManagementFolderType = 55;
+
+        /// <summary>
         /// The identifier for the KeyCredentialServiceType ObjectType.
         /// </summary>
         public const uint KeyCredentialServiceType = 1020;
@@ -1109,6 +1139,11 @@ namespace Opc.Ua.Gds
         /// The identifier for the KeyCredentialRevokedAuditEventType ObjectType.
         /// </summary>
         public const uint KeyCredentialRevokedAuditEventType = 1075;
+
+        /// <summary>
+        /// The identifier for the AuthorizationServicesFolderType ObjectType.
+        /// </summary>
+        public const uint AuthorizationServicesFolderType = 233;
 
         /// <summary>
         /// The identifier for the AuthorizationServiceType ObjectType.
@@ -1921,6 +1956,11 @@ namespace Opc.Ua.Gds
         public const uint CertificateDirectoryType_CertificateGroups_DefaultApplicationGroup_TrustListOutOfDate_UpdateFrequency = 15302;
 
         /// <summary>
+        /// The identifier for the CertificateDirectoryType_CertificateGroups_DefaultApplicationGroup_GetRejectedList_OutputArguments Variable.
+        /// </summary>
+        public const uint CertificateDirectoryType_CertificateGroups_DefaultApplicationGroup_GetRejectedList_OutputArguments = 60;
+
+        /// <summary>
         /// The identifier for the CertificateDirectoryType_CertificateGroups_DefaultHttpsGroup_TrustList_Size Variable.
         /// </summary>
         public const uint CertificateDirectoryType_CertificateGroups_DefaultHttpsGroup_TrustList_Size = 548;
@@ -2474,6 +2514,11 @@ namespace Opc.Ua.Gds
         /// The identifier for the CertificateDirectoryType_CertificateGroups_DefaultHttpsGroup_TrustListOutOfDate_UpdateFrequency Variable.
         /// </summary>
         public const uint CertificateDirectoryType_CertificateGroups_DefaultHttpsGroup_TrustListOutOfDate_UpdateFrequency = 15598;
+
+        /// <summary>
+        /// The identifier for the CertificateDirectoryType_CertificateGroups_DefaultHttpsGroup_GetRejectedList_OutputArguments Variable.
+        /// </summary>
+        public const uint CertificateDirectoryType_CertificateGroups_DefaultHttpsGroup_GetRejectedList_OutputArguments = 82;
 
         /// <summary>
         /// The identifier for the CertificateDirectoryType_CertificateGroups_DefaultUserTokenGroup_TrustList_Size Variable.
@@ -3031,6 +3076,11 @@ namespace Opc.Ua.Gds
         public const uint CertificateDirectoryType_CertificateGroups_DefaultUserTokenGroup_TrustListOutOfDate_UpdateFrequency = 15894;
 
         /// <summary>
+        /// The identifier for the CertificateDirectoryType_CertificateGroups_DefaultUserTokenGroup_GetRejectedList_OutputArguments Variable.
+        /// </summary>
+        public const uint CertificateDirectoryType_CertificateGroups_DefaultUserTokenGroup_GetRejectedList_OutputArguments = 88;
+
+        /// <summary>
         /// The identifier for the CertificateDirectoryType_StartSigningRequest_InputArguments Variable.
         /// </summary>
         public const uint CertificateDirectoryType_StartSigningRequest_InputArguments = 80;
@@ -3116,6 +3166,41 @@ namespace Opc.Ua.Gds
         public const uint CertificateDeliveredAuditEventType_CertificateType = 720;
 
         /// <summary>
+        /// The identifier for the KeyCredentialManagementFolderType_ServiceName_Placeholder_ResourceUri Variable.
+        /// </summary>
+        public const uint KeyCredentialManagementFolderType_ServiceName_Placeholder_ResourceUri = 83;
+
+        /// <summary>
+        /// The identifier for the KeyCredentialManagementFolderType_ServiceName_Placeholder_ProfileUris Variable.
+        /// </summary>
+        public const uint KeyCredentialManagementFolderType_ServiceName_Placeholder_ProfileUris = 162;
+
+        /// <summary>
+        /// The identifier for the KeyCredentialManagementFolderType_ServiceName_Placeholder_StartRequest_InputArguments Variable.
+        /// </summary>
+        public const uint KeyCredentialManagementFolderType_ServiceName_Placeholder_StartRequest_InputArguments = 171;
+
+        /// <summary>
+        /// The identifier for the KeyCredentialManagementFolderType_ServiceName_Placeholder_StartRequest_OutputArguments Variable.
+        /// </summary>
+        public const uint KeyCredentialManagementFolderType_ServiceName_Placeholder_StartRequest_OutputArguments = 195;
+
+        /// <summary>
+        /// The identifier for the KeyCredentialManagementFolderType_ServiceName_Placeholder_FinishRequest_InputArguments Variable.
+        /// </summary>
+        public const uint KeyCredentialManagementFolderType_ServiceName_Placeholder_FinishRequest_InputArguments = 202;
+
+        /// <summary>
+        /// The identifier for the KeyCredentialManagementFolderType_ServiceName_Placeholder_FinishRequest_OutputArguments Variable.
+        /// </summary>
+        public const uint KeyCredentialManagementFolderType_ServiceName_Placeholder_FinishRequest_OutputArguments = 203;
+
+        /// <summary>
+        /// The identifier for the KeyCredentialManagementFolderType_ServiceName_Placeholder_Revoke_InputArguments Variable.
+        /// </summary>
+        public const uint KeyCredentialManagementFolderType_ServiceName_Placeholder_Revoke_InputArguments = 229;
+
+        /// <summary>
         /// The identifier for the KeyCredentialManagement_ServiceName_Placeholder_ResourceUri Variable.
         /// </summary>
         public const uint KeyCredentialManagement_ServiceName_Placeholder_ResourceUri = 1010;
@@ -3184,6 +3269,31 @@ namespace Opc.Ua.Gds
         /// The identifier for the KeyCredentialServiceType_Revoke_InputArguments Variable.
         /// </summary>
         public const uint KeyCredentialServiceType_Revoke_InputArguments = 1030;
+
+        /// <summary>
+        /// The identifier for the AuthorizationServicesFolderType_ServiceName_Placeholder_ServiceUri Variable.
+        /// </summary>
+        public const uint AuthorizationServicesFolderType_ServiceName_Placeholder_ServiceUri = 235;
+
+        /// <summary>
+        /// The identifier for the AuthorizationServicesFolderType_ServiceName_Placeholder_ServiceCertificate Variable.
+        /// </summary>
+        public const uint AuthorizationServicesFolderType_ServiceName_Placeholder_ServiceCertificate = 236;
+
+        /// <summary>
+        /// The identifier for the AuthorizationServicesFolderType_ServiceName_Placeholder_GetServiceDescription_OutputArguments Variable.
+        /// </summary>
+        public const uint AuthorizationServicesFolderType_ServiceName_Placeholder_GetServiceDescription_OutputArguments = 239;
+
+        /// <summary>
+        /// The identifier for the AuthorizationServicesFolderType_ServiceName_Placeholder_RequestAccessToken_InputArguments Variable.
+        /// </summary>
+        public const uint AuthorizationServicesFolderType_ServiceName_Placeholder_RequestAccessToken_InputArguments = 241;
+
+        /// <summary>
+        /// The identifier for the AuthorizationServicesFolderType_ServiceName_Placeholder_RequestAccessToken_OutputArguments Variable.
+        /// </summary>
+        public const uint AuthorizationServicesFolderType_ServiceName_Placeholder_RequestAccessToken_OutputArguments = 242;
 
         /// <summary>
         /// The identifier for the AuthorizationServices_ServiceName_Placeholder_ServiceUri Variable.
@@ -3856,6 +3966,11 @@ namespace Opc.Ua.Gds
         public const uint Directory_CertificateGroups_DefaultApplicationGroup_TrustListOutOfDate_UpdateFrequency = 16207;
 
         /// <summary>
+        /// The identifier for the Directory_CertificateGroups_DefaultApplicationGroup_GetRejectedList_OutputArguments Variable.
+        /// </summary>
+        public const uint Directory_CertificateGroups_DefaultApplicationGroup_GetRejectedList_OutputArguments = 167;
+
+        /// <summary>
         /// The identifier for the Directory_CertificateGroups_DefaultHttpsGroup_TrustList_Size Variable.
         /// </summary>
         public const uint Directory_CertificateGroups_DefaultHttpsGroup_TrustList_Size = 651;
@@ -4409,6 +4524,11 @@ namespace Opc.Ua.Gds
         /// The identifier for the Directory_CertificateGroups_DefaultHttpsGroup_TrustListOutOfDate_UpdateFrequency Variable.
         /// </summary>
         public const uint Directory_CertificateGroups_DefaultHttpsGroup_TrustListOutOfDate_UpdateFrequency = 16503;
+
+        /// <summary>
+        /// The identifier for the Directory_CertificateGroups_DefaultHttpsGroup_GetRejectedList_OutputArguments Variable.
+        /// </summary>
+        public const uint Directory_CertificateGroups_DefaultHttpsGroup_GetRejectedList_OutputArguments = 170;
 
         /// <summary>
         /// The identifier for the Directory_CertificateGroups_DefaultUserTokenGroup_TrustList_Size Variable.
@@ -4966,6 +5086,11 @@ namespace Opc.Ua.Gds
         public const uint Directory_CertificateGroups_DefaultUserTokenGroup_TrustListOutOfDate_UpdateFrequency = 16799;
 
         /// <summary>
+        /// The identifier for the Directory_CertificateGroups_DefaultUserTokenGroup_GetRejectedList_OutputArguments Variable.
+        /// </summary>
+        public const uint Directory_CertificateGroups_DefaultUserTokenGroup_GetRejectedList_OutputArguments = 173;
+
+        /// <summary>
         /// The identifier for the Directory_StartSigningRequest_InputArguments Variable.
         /// </summary>
         public const uint Directory_StartSigningRequest_InputArguments = 158;
@@ -5511,6 +5636,16 @@ namespace Opc.Ua.Gds
         public static readonly ExpandedNodeId CertificateDirectoryType_GetCertificateStatus = new ExpandedNodeId(Opc.Ua.Gds.Methods.CertificateDirectoryType_GetCertificateStatus, Opc.Ua.Gds.Namespaces.OpcUaGds);
 
         /// <summary>
+        /// The identifier for the KeyCredentialManagementFolderType_ServiceName_Placeholder_StartRequest Method.
+        /// </summary>
+        public static readonly ExpandedNodeId KeyCredentialManagementFolderType_ServiceName_Placeholder_StartRequest = new ExpandedNodeId(Opc.Ua.Gds.Methods.KeyCredentialManagementFolderType_ServiceName_Placeholder_StartRequest, Opc.Ua.Gds.Namespaces.OpcUaGds);
+
+        /// <summary>
+        /// The identifier for the KeyCredentialManagementFolderType_ServiceName_Placeholder_FinishRequest Method.
+        /// </summary>
+        public static readonly ExpandedNodeId KeyCredentialManagementFolderType_ServiceName_Placeholder_FinishRequest = new ExpandedNodeId(Opc.Ua.Gds.Methods.KeyCredentialManagementFolderType_ServiceName_Placeholder_FinishRequest, Opc.Ua.Gds.Namespaces.OpcUaGds);
+
+        /// <summary>
         /// The identifier for the KeyCredentialManagement_ServiceName_Placeholder_StartRequest Method.
         /// </summary>
         public static readonly ExpandedNodeId KeyCredentialManagement_ServiceName_Placeholder_StartRequest = new ExpandedNodeId(Opc.Ua.Gds.Methods.KeyCredentialManagement_ServiceName_Placeholder_StartRequest, Opc.Ua.Gds.Namespaces.OpcUaGds);
@@ -5534,6 +5669,11 @@ namespace Opc.Ua.Gds
         /// The identifier for the KeyCredentialServiceType_Revoke Method.
         /// </summary>
         public static readonly ExpandedNodeId KeyCredentialServiceType_Revoke = new ExpandedNodeId(Opc.Ua.Gds.Methods.KeyCredentialServiceType_Revoke, Opc.Ua.Gds.Namespaces.OpcUaGds);
+
+        /// <summary>
+        /// The identifier for the AuthorizationServicesFolderType_ServiceName_Placeholder_GetServiceDescription Method.
+        /// </summary>
+        public static readonly ExpandedNodeId AuthorizationServicesFolderType_ServiceName_Placeholder_GetServiceDescription = new ExpandedNodeId(Opc.Ua.Gds.Methods.AuthorizationServicesFolderType_ServiceName_Placeholder_GetServiceDescription, Opc.Ua.Gds.Namespaces.OpcUaGds);
 
         /// <summary>
         /// The identifier for the AuthorizationServices_ServiceName_Placeholder_GetServiceDescription Method.
@@ -6021,9 +6161,19 @@ namespace Opc.Ua.Gds
         public static readonly ExpandedNodeId CertificateDirectoryType_CertificateGroups_DefaultUserTokenGroup_TrustList = new ExpandedNodeId(Opc.Ua.Gds.Objects.CertificateDirectoryType_CertificateGroups_DefaultUserTokenGroup_TrustList, Opc.Ua.Gds.Namespaces.OpcUaGds);
 
         /// <summary>
+        /// The identifier for the KeyCredentialManagementFolderType_ServiceName_Placeholder Object.
+        /// </summary>
+        public static readonly ExpandedNodeId KeyCredentialManagementFolderType_ServiceName_Placeholder = new ExpandedNodeId(Opc.Ua.Gds.Objects.KeyCredentialManagementFolderType_ServiceName_Placeholder, Opc.Ua.Gds.Namespaces.OpcUaGds);
+
+        /// <summary>
         /// The identifier for the KeyCredentialManagement Object.
         /// </summary>
         public static readonly ExpandedNodeId KeyCredentialManagement = new ExpandedNodeId(Opc.Ua.Gds.Objects.KeyCredentialManagement, Opc.Ua.Gds.Namespaces.OpcUaGds);
+
+        /// <summary>
+        /// The identifier for the AuthorizationServicesFolderType_ServiceName_Placeholder Object.
+        /// </summary>
+        public static readonly ExpandedNodeId AuthorizationServicesFolderType_ServiceName_Placeholder = new ExpandedNodeId(Opc.Ua.Gds.Objects.AuthorizationServicesFolderType_ServiceName_Placeholder, Opc.Ua.Gds.Namespaces.OpcUaGds);
 
         /// <summary>
         /// The identifier for the AuthorizationServices Object.
@@ -6126,6 +6276,11 @@ namespace Opc.Ua.Gds
         public static readonly ExpandedNodeId CertificateDeliveredAuditEventType = new ExpandedNodeId(Opc.Ua.Gds.ObjectTypes.CertificateDeliveredAuditEventType, Opc.Ua.Gds.Namespaces.OpcUaGds);
 
         /// <summary>
+        /// The identifier for the KeyCredentialManagementFolderType ObjectType.
+        /// </summary>
+        public static readonly ExpandedNodeId KeyCredentialManagementFolderType = new ExpandedNodeId(Opc.Ua.Gds.ObjectTypes.KeyCredentialManagementFolderType, Opc.Ua.Gds.Namespaces.OpcUaGds);
+
+        /// <summary>
         /// The identifier for the KeyCredentialServiceType ObjectType.
         /// </summary>
         public static readonly ExpandedNodeId KeyCredentialServiceType = new ExpandedNodeId(Opc.Ua.Gds.ObjectTypes.KeyCredentialServiceType, Opc.Ua.Gds.Namespaces.OpcUaGds);
@@ -6144,6 +6299,11 @@ namespace Opc.Ua.Gds
         /// The identifier for the KeyCredentialRevokedAuditEventType ObjectType.
         /// </summary>
         public static readonly ExpandedNodeId KeyCredentialRevokedAuditEventType = new ExpandedNodeId(Opc.Ua.Gds.ObjectTypes.KeyCredentialRevokedAuditEventType, Opc.Ua.Gds.Namespaces.OpcUaGds);
+
+        /// <summary>
+        /// The identifier for the AuthorizationServicesFolderType ObjectType.
+        /// </summary>
+        public static readonly ExpandedNodeId AuthorizationServicesFolderType = new ExpandedNodeId(Opc.Ua.Gds.ObjectTypes.AuthorizationServicesFolderType, Opc.Ua.Gds.Namespaces.OpcUaGds);
 
         /// <summary>
         /// The identifier for the AuthorizationServiceType ObjectType.
@@ -6956,6 +7116,11 @@ namespace Opc.Ua.Gds
         public static readonly ExpandedNodeId CertificateDirectoryType_CertificateGroups_DefaultApplicationGroup_TrustListOutOfDate_UpdateFrequency = new ExpandedNodeId(Opc.Ua.Gds.Variables.CertificateDirectoryType_CertificateGroups_DefaultApplicationGroup_TrustListOutOfDate_UpdateFrequency, Opc.Ua.Gds.Namespaces.OpcUaGds);
 
         /// <summary>
+        /// The identifier for the CertificateDirectoryType_CertificateGroups_DefaultApplicationGroup_GetRejectedList_OutputArguments Variable.
+        /// </summary>
+        public static readonly ExpandedNodeId CertificateDirectoryType_CertificateGroups_DefaultApplicationGroup_GetRejectedList_OutputArguments = new ExpandedNodeId(Opc.Ua.Gds.Variables.CertificateDirectoryType_CertificateGroups_DefaultApplicationGroup_GetRejectedList_OutputArguments, Opc.Ua.Gds.Namespaces.OpcUaGds);
+
+        /// <summary>
         /// The identifier for the CertificateDirectoryType_CertificateGroups_DefaultHttpsGroup_TrustList_Size Variable.
         /// </summary>
         public static readonly ExpandedNodeId CertificateDirectoryType_CertificateGroups_DefaultHttpsGroup_TrustList_Size = new ExpandedNodeId(Opc.Ua.Gds.Variables.CertificateDirectoryType_CertificateGroups_DefaultHttpsGroup_TrustList_Size, Opc.Ua.Gds.Namespaces.OpcUaGds);
@@ -7509,6 +7674,11 @@ namespace Opc.Ua.Gds
         /// The identifier for the CertificateDirectoryType_CertificateGroups_DefaultHttpsGroup_TrustListOutOfDate_UpdateFrequency Variable.
         /// </summary>
         public static readonly ExpandedNodeId CertificateDirectoryType_CertificateGroups_DefaultHttpsGroup_TrustListOutOfDate_UpdateFrequency = new ExpandedNodeId(Opc.Ua.Gds.Variables.CertificateDirectoryType_CertificateGroups_DefaultHttpsGroup_TrustListOutOfDate_UpdateFrequency, Opc.Ua.Gds.Namespaces.OpcUaGds);
+
+        /// <summary>
+        /// The identifier for the CertificateDirectoryType_CertificateGroups_DefaultHttpsGroup_GetRejectedList_OutputArguments Variable.
+        /// </summary>
+        public static readonly ExpandedNodeId CertificateDirectoryType_CertificateGroups_DefaultHttpsGroup_GetRejectedList_OutputArguments = new ExpandedNodeId(Opc.Ua.Gds.Variables.CertificateDirectoryType_CertificateGroups_DefaultHttpsGroup_GetRejectedList_OutputArguments, Opc.Ua.Gds.Namespaces.OpcUaGds);
 
         /// <summary>
         /// The identifier for the CertificateDirectoryType_CertificateGroups_DefaultUserTokenGroup_TrustList_Size Variable.
@@ -8066,6 +8236,11 @@ namespace Opc.Ua.Gds
         public static readonly ExpandedNodeId CertificateDirectoryType_CertificateGroups_DefaultUserTokenGroup_TrustListOutOfDate_UpdateFrequency = new ExpandedNodeId(Opc.Ua.Gds.Variables.CertificateDirectoryType_CertificateGroups_DefaultUserTokenGroup_TrustListOutOfDate_UpdateFrequency, Opc.Ua.Gds.Namespaces.OpcUaGds);
 
         /// <summary>
+        /// The identifier for the CertificateDirectoryType_CertificateGroups_DefaultUserTokenGroup_GetRejectedList_OutputArguments Variable.
+        /// </summary>
+        public static readonly ExpandedNodeId CertificateDirectoryType_CertificateGroups_DefaultUserTokenGroup_GetRejectedList_OutputArguments = new ExpandedNodeId(Opc.Ua.Gds.Variables.CertificateDirectoryType_CertificateGroups_DefaultUserTokenGroup_GetRejectedList_OutputArguments, Opc.Ua.Gds.Namespaces.OpcUaGds);
+
+        /// <summary>
         /// The identifier for the CertificateDirectoryType_StartSigningRequest_InputArguments Variable.
         /// </summary>
         public static readonly ExpandedNodeId CertificateDirectoryType_StartSigningRequest_InputArguments = new ExpandedNodeId(Opc.Ua.Gds.Variables.CertificateDirectoryType_StartSigningRequest_InputArguments, Opc.Ua.Gds.Namespaces.OpcUaGds);
@@ -8151,6 +8326,41 @@ namespace Opc.Ua.Gds
         public static readonly ExpandedNodeId CertificateDeliveredAuditEventType_CertificateType = new ExpandedNodeId(Opc.Ua.Gds.Variables.CertificateDeliveredAuditEventType_CertificateType, Opc.Ua.Gds.Namespaces.OpcUaGds);
 
         /// <summary>
+        /// The identifier for the KeyCredentialManagementFolderType_ServiceName_Placeholder_ResourceUri Variable.
+        /// </summary>
+        public static readonly ExpandedNodeId KeyCredentialManagementFolderType_ServiceName_Placeholder_ResourceUri = new ExpandedNodeId(Opc.Ua.Gds.Variables.KeyCredentialManagementFolderType_ServiceName_Placeholder_ResourceUri, Opc.Ua.Gds.Namespaces.OpcUaGds);
+
+        /// <summary>
+        /// The identifier for the KeyCredentialManagementFolderType_ServiceName_Placeholder_ProfileUris Variable.
+        /// </summary>
+        public static readonly ExpandedNodeId KeyCredentialManagementFolderType_ServiceName_Placeholder_ProfileUris = new ExpandedNodeId(Opc.Ua.Gds.Variables.KeyCredentialManagementFolderType_ServiceName_Placeholder_ProfileUris, Opc.Ua.Gds.Namespaces.OpcUaGds);
+
+        /// <summary>
+        /// The identifier for the KeyCredentialManagementFolderType_ServiceName_Placeholder_StartRequest_InputArguments Variable.
+        /// </summary>
+        public static readonly ExpandedNodeId KeyCredentialManagementFolderType_ServiceName_Placeholder_StartRequest_InputArguments = new ExpandedNodeId(Opc.Ua.Gds.Variables.KeyCredentialManagementFolderType_ServiceName_Placeholder_StartRequest_InputArguments, Opc.Ua.Gds.Namespaces.OpcUaGds);
+
+        /// <summary>
+        /// The identifier for the KeyCredentialManagementFolderType_ServiceName_Placeholder_StartRequest_OutputArguments Variable.
+        /// </summary>
+        public static readonly ExpandedNodeId KeyCredentialManagementFolderType_ServiceName_Placeholder_StartRequest_OutputArguments = new ExpandedNodeId(Opc.Ua.Gds.Variables.KeyCredentialManagementFolderType_ServiceName_Placeholder_StartRequest_OutputArguments, Opc.Ua.Gds.Namespaces.OpcUaGds);
+
+        /// <summary>
+        /// The identifier for the KeyCredentialManagementFolderType_ServiceName_Placeholder_FinishRequest_InputArguments Variable.
+        /// </summary>
+        public static readonly ExpandedNodeId KeyCredentialManagementFolderType_ServiceName_Placeholder_FinishRequest_InputArguments = new ExpandedNodeId(Opc.Ua.Gds.Variables.KeyCredentialManagementFolderType_ServiceName_Placeholder_FinishRequest_InputArguments, Opc.Ua.Gds.Namespaces.OpcUaGds);
+
+        /// <summary>
+        /// The identifier for the KeyCredentialManagementFolderType_ServiceName_Placeholder_FinishRequest_OutputArguments Variable.
+        /// </summary>
+        public static readonly ExpandedNodeId KeyCredentialManagementFolderType_ServiceName_Placeholder_FinishRequest_OutputArguments = new ExpandedNodeId(Opc.Ua.Gds.Variables.KeyCredentialManagementFolderType_ServiceName_Placeholder_FinishRequest_OutputArguments, Opc.Ua.Gds.Namespaces.OpcUaGds);
+
+        /// <summary>
+        /// The identifier for the KeyCredentialManagementFolderType_ServiceName_Placeholder_Revoke_InputArguments Variable.
+        /// </summary>
+        public static readonly ExpandedNodeId KeyCredentialManagementFolderType_ServiceName_Placeholder_Revoke_InputArguments = new ExpandedNodeId(Opc.Ua.Gds.Variables.KeyCredentialManagementFolderType_ServiceName_Placeholder_Revoke_InputArguments, Opc.Ua.Gds.Namespaces.OpcUaGds);
+
+        /// <summary>
         /// The identifier for the KeyCredentialManagement_ServiceName_Placeholder_ResourceUri Variable.
         /// </summary>
         public static readonly ExpandedNodeId KeyCredentialManagement_ServiceName_Placeholder_ResourceUri = new ExpandedNodeId(Opc.Ua.Gds.Variables.KeyCredentialManagement_ServiceName_Placeholder_ResourceUri, Opc.Ua.Gds.Namespaces.OpcUaGds);
@@ -8219,6 +8429,31 @@ namespace Opc.Ua.Gds
         /// The identifier for the KeyCredentialServiceType_Revoke_InputArguments Variable.
         /// </summary>
         public static readonly ExpandedNodeId KeyCredentialServiceType_Revoke_InputArguments = new ExpandedNodeId(Opc.Ua.Gds.Variables.KeyCredentialServiceType_Revoke_InputArguments, Opc.Ua.Gds.Namespaces.OpcUaGds);
+
+        /// <summary>
+        /// The identifier for the AuthorizationServicesFolderType_ServiceName_Placeholder_ServiceUri Variable.
+        /// </summary>
+        public static readonly ExpandedNodeId AuthorizationServicesFolderType_ServiceName_Placeholder_ServiceUri = new ExpandedNodeId(Opc.Ua.Gds.Variables.AuthorizationServicesFolderType_ServiceName_Placeholder_ServiceUri, Opc.Ua.Gds.Namespaces.OpcUaGds);
+
+        /// <summary>
+        /// The identifier for the AuthorizationServicesFolderType_ServiceName_Placeholder_ServiceCertificate Variable.
+        /// </summary>
+        public static readonly ExpandedNodeId AuthorizationServicesFolderType_ServiceName_Placeholder_ServiceCertificate = new ExpandedNodeId(Opc.Ua.Gds.Variables.AuthorizationServicesFolderType_ServiceName_Placeholder_ServiceCertificate, Opc.Ua.Gds.Namespaces.OpcUaGds);
+
+        /// <summary>
+        /// The identifier for the AuthorizationServicesFolderType_ServiceName_Placeholder_GetServiceDescription_OutputArguments Variable.
+        /// </summary>
+        public static readonly ExpandedNodeId AuthorizationServicesFolderType_ServiceName_Placeholder_GetServiceDescription_OutputArguments = new ExpandedNodeId(Opc.Ua.Gds.Variables.AuthorizationServicesFolderType_ServiceName_Placeholder_GetServiceDescription_OutputArguments, Opc.Ua.Gds.Namespaces.OpcUaGds);
+
+        /// <summary>
+        /// The identifier for the AuthorizationServicesFolderType_ServiceName_Placeholder_RequestAccessToken_InputArguments Variable.
+        /// </summary>
+        public static readonly ExpandedNodeId AuthorizationServicesFolderType_ServiceName_Placeholder_RequestAccessToken_InputArguments = new ExpandedNodeId(Opc.Ua.Gds.Variables.AuthorizationServicesFolderType_ServiceName_Placeholder_RequestAccessToken_InputArguments, Opc.Ua.Gds.Namespaces.OpcUaGds);
+
+        /// <summary>
+        /// The identifier for the AuthorizationServicesFolderType_ServiceName_Placeholder_RequestAccessToken_OutputArguments Variable.
+        /// </summary>
+        public static readonly ExpandedNodeId AuthorizationServicesFolderType_ServiceName_Placeholder_RequestAccessToken_OutputArguments = new ExpandedNodeId(Opc.Ua.Gds.Variables.AuthorizationServicesFolderType_ServiceName_Placeholder_RequestAccessToken_OutputArguments, Opc.Ua.Gds.Namespaces.OpcUaGds);
 
         /// <summary>
         /// The identifier for the AuthorizationServices_ServiceName_Placeholder_ServiceUri Variable.
@@ -8891,6 +9126,11 @@ namespace Opc.Ua.Gds
         public static readonly ExpandedNodeId Directory_CertificateGroups_DefaultApplicationGroup_TrustListOutOfDate_UpdateFrequency = new ExpandedNodeId(Opc.Ua.Gds.Variables.Directory_CertificateGroups_DefaultApplicationGroup_TrustListOutOfDate_UpdateFrequency, Opc.Ua.Gds.Namespaces.OpcUaGds);
 
         /// <summary>
+        /// The identifier for the Directory_CertificateGroups_DefaultApplicationGroup_GetRejectedList_OutputArguments Variable.
+        /// </summary>
+        public static readonly ExpandedNodeId Directory_CertificateGroups_DefaultApplicationGroup_GetRejectedList_OutputArguments = new ExpandedNodeId(Opc.Ua.Gds.Variables.Directory_CertificateGroups_DefaultApplicationGroup_GetRejectedList_OutputArguments, Opc.Ua.Gds.Namespaces.OpcUaGds);
+
+        /// <summary>
         /// The identifier for the Directory_CertificateGroups_DefaultHttpsGroup_TrustList_Size Variable.
         /// </summary>
         public static readonly ExpandedNodeId Directory_CertificateGroups_DefaultHttpsGroup_TrustList_Size = new ExpandedNodeId(Opc.Ua.Gds.Variables.Directory_CertificateGroups_DefaultHttpsGroup_TrustList_Size, Opc.Ua.Gds.Namespaces.OpcUaGds);
@@ -9444,6 +9684,11 @@ namespace Opc.Ua.Gds
         /// The identifier for the Directory_CertificateGroups_DefaultHttpsGroup_TrustListOutOfDate_UpdateFrequency Variable.
         /// </summary>
         public static readonly ExpandedNodeId Directory_CertificateGroups_DefaultHttpsGroup_TrustListOutOfDate_UpdateFrequency = new ExpandedNodeId(Opc.Ua.Gds.Variables.Directory_CertificateGroups_DefaultHttpsGroup_TrustListOutOfDate_UpdateFrequency, Opc.Ua.Gds.Namespaces.OpcUaGds);
+
+        /// <summary>
+        /// The identifier for the Directory_CertificateGroups_DefaultHttpsGroup_GetRejectedList_OutputArguments Variable.
+        /// </summary>
+        public static readonly ExpandedNodeId Directory_CertificateGroups_DefaultHttpsGroup_GetRejectedList_OutputArguments = new ExpandedNodeId(Opc.Ua.Gds.Variables.Directory_CertificateGroups_DefaultHttpsGroup_GetRejectedList_OutputArguments, Opc.Ua.Gds.Namespaces.OpcUaGds);
 
         /// <summary>
         /// The identifier for the Directory_CertificateGroups_DefaultUserTokenGroup_TrustList_Size Variable.
@@ -10001,6 +10246,11 @@ namespace Opc.Ua.Gds
         public static readonly ExpandedNodeId Directory_CertificateGroups_DefaultUserTokenGroup_TrustListOutOfDate_UpdateFrequency = new ExpandedNodeId(Opc.Ua.Gds.Variables.Directory_CertificateGroups_DefaultUserTokenGroup_TrustListOutOfDate_UpdateFrequency, Opc.Ua.Gds.Namespaces.OpcUaGds);
 
         /// <summary>
+        /// The identifier for the Directory_CertificateGroups_DefaultUserTokenGroup_GetRejectedList_OutputArguments Variable.
+        /// </summary>
+        public static readonly ExpandedNodeId Directory_CertificateGroups_DefaultUserTokenGroup_GetRejectedList_OutputArguments = new ExpandedNodeId(Opc.Ua.Gds.Variables.Directory_CertificateGroups_DefaultUserTokenGroup_GetRejectedList_OutputArguments, Opc.Ua.Gds.Namespaces.OpcUaGds);
+
+        /// <summary>
         /// The identifier for the Directory_StartSigningRequest_InputArguments Variable.
         /// </summary>
         public static readonly ExpandedNodeId Directory_StartSigningRequest_InputArguments = new ExpandedNodeId(Opc.Ua.Gds.Variables.Directory_StartSigningRequest_InputArguments, Opc.Ua.Gds.Namespaces.OpcUaGds);
@@ -10140,6 +10390,11 @@ namespace Opc.Ua.Gds
         public const string AuthorizationServices = "AuthorizationServices";
 
         /// <summary>
+        /// The BrowseName for the AuthorizationServicesFolderType component.
+        /// </summary>
+        public const string AuthorizationServicesFolderType = "AuthorizationServicesFolderType";
+
+        /// <summary>
         /// The BrowseName for the AuthorizationServiceType component.
         /// </summary>
         public const string AuthorizationServiceType = "AuthorizationServiceType";
@@ -10228,6 +10483,11 @@ namespace Opc.Ua.Gds
         /// The BrowseName for the KeyCredentialManagement component.
         /// </summary>
         public const string KeyCredentialManagement = "KeyCredentialManagement";
+
+        /// <summary>
+        /// The BrowseName for the KeyCredentialManagementFolderType component.
+        /// </summary>
+        public const string KeyCredentialManagementFolderType = "KeyCredentialManagementFolderType";
 
         /// <summary>
         /// The BrowseName for the KeyCredentialRequestedAuditEventType component.

@@ -1,6 +1,6 @@
-/* Copyright (c) 1996-2019 The OPC Foundation. All rights reserved.
+/* Copyright (c) 1996-2022 The OPC Foundation. All rights reserved.
    The source code in this file is covered under a dual-license scenario:
-     - RCL: for OPC Foundation members in good-standing
+     - RCL: for OPC Foundation Corporate Members in good-standing
      - GPL V2: everybody else
    RCL license terms accompanied with this source code. See http://opcfoundation.org/License/RCL/1.00/
    GNU General Public License as published by the Free Software Foundation;
@@ -14,6 +14,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml;
@@ -38,7 +39,15 @@ namespace Opc.Ua.Schema.Binary
         /// <summary>
         /// Intializes the object with a file table.
         /// </summary>
-        public BinarySchemaValidator(Dictionary<string, string> fileTable) : base(fileTable)
+        public BinarySchemaValidator(IDictionary<string, string> fileTable) : base(fileTable)
+        {
+            SetResourcePaths(WellKnownDictionaries);
+        }
+
+        /// <summary>
+        /// Intializes the object with a import table.
+        /// </summary>
+        public BinarySchemaValidator(IDictionary<string, byte[]> importTable) : base(importTable)
         {
             SetResourcePaths(WellKnownDictionaries);
         }
@@ -67,7 +76,7 @@ namespace Opc.Ua.Schema.Binary
         {
             // read and parse the file.
             Dictionary = (TypeDictionary)LoadInput(typeof(TypeDictionary), stream);
-            await Validate();
+            await Validate().ConfigureAwait(false);
         }
 
         /// <summary>
@@ -77,7 +86,7 @@ namespace Opc.Ua.Schema.Binary
         {
             // read and parse the file.
             Dictionary = (TypeDictionary)LoadInput(typeof(TypeDictionary), inputPath);
-            await Validate();
+            await Validate().ConfigureAwait(false);
         }
 
         /// <summary>
@@ -85,11 +94,7 @@ namespace Opc.Ua.Schema.Binary
         /// </summary>
         public override string GetSchema(string typeName)
         {
-            XmlWriterSettings settings = new XmlWriterSettings();
-
-            settings.Encoding = Encoding.UTF8;
-            settings.Indent = true;
-            settings.IndentChars = "    ";
+            XmlWriterSettings settings = Utils.DefaultXmlWriterSettings();
 
             MemoryStream ostrm = new MemoryStream();
             XmlWriter writer = XmlWriter.Create(ostrm, settings);
@@ -142,14 +147,17 @@ namespace Opc.Ua.Schema.Binary
             {
                 foreach (ImportDirective directive in Dictionary.Import)
                 {
-                    await Import(directive);
+                    await Import(directive).ConfigureAwait(false);
                 }
             }
             else
             {
-                // always import builtin types
-                ImportDirective directive = new ImportDirective { Namespace = Namespaces.OpcUa };
-                await Import(directive);
+                // always import builtin types, unless wellknown library
+                if (!WellKnownDictionaries.Any(n => string.Equals(n[0], Dictionary.TargetNamespace, StringComparison.Ordinal)))
+                {
+                    ImportDirective directive = new ImportDirective { Namespace = Namespaces.OpcUa };
+                    await Import(directive).ConfigureAwait(false);
+                }
             }
 
             // import types from imported dictionaries.
@@ -159,17 +167,20 @@ namespace Opc.Ua.Schema.Binary
             }
 
             // import types from target dictionary.
-            foreach (TypeDescription description in Dictionary.Items)
+            if (Dictionary.Items != null)
             {
-                ImportDescription(description, Dictionary.TargetNamespace);
-                m_validatedDescriptions.Add(description);
-            }
+                foreach (TypeDescription description in Dictionary.Items)
+                {
+                    ImportDescription(description, Dictionary.TargetNamespace);
+                    m_validatedDescriptions.Add(description);
+                }
 
-            // validate types from target dictionary.
-            foreach (TypeDescription description in m_validatedDescriptions)
-            {
-                ValidateDescription(description);
-                m_warnings.Add(String.Format(CultureInfo.InvariantCulture, "{0} '{1}' validated.", description.GetType().Name, description.Name));
+                // validate types from target dictionary.
+                foreach (TypeDescription description in m_validatedDescriptions)
+                {
+                    ValidateDescription(description);
+                    m_warnings.Add(String.Format(CultureInfo.InvariantCulture, "{0} '{1}' validated.", description.GetType().Name, description.Name));
+                }
             }
         }
 
@@ -200,7 +211,7 @@ namespace Opc.Ua.Schema.Binary
             {
                 for (int ii = 0; ii < dictionary.Import.Length; ii++)
                 {
-                    await Import(dictionary.Import[ii]);
+                    await Import(dictionary.Import[ii]).ConfigureAwait(false);
                 }
             }
 
@@ -332,11 +343,12 @@ namespace Opc.Ua.Schema.Binary
                 return false;
             }
 
-            if (!Char.IsLetter(name[0]) && name[0] != '_')
+            if (!Char.IsLetter(name[0]) && name[0] != '_' && name[0] != '"')
             {
                 return false;
             }
 
+            bool insideParentheses = name[0] == '"';
             for (int ii = 1; ii < name.Length; ii++)
             {
                 if (Char.IsLetter(name[ii]) || Char.IsDigit(name[ii]))
@@ -344,7 +356,18 @@ namespace Opc.Ua.Schema.Binary
                     continue;
                 }
 
+                if (name[ii] == '"')
+                {
+                    insideParentheses = !insideParentheses;
+                    continue;
+                }
+
                 if (name[ii] == '.' || name[ii] == '-' || name[ii] == '_')
+                {
+                    continue;
+                }
+
+                if (name[ii] == ' ' && insideParentheses)
                 {
                     continue;
                 }
@@ -417,7 +440,7 @@ namespace Opc.Ua.Schema.Binary
             {
                 if (structure.Field == null || structure.Field.Length == 0)
                 {
-                    structure.Field = new FieldType[0];
+                    structure.Field = Array.Empty<FieldType>();
                 }
 
                 int bitCount = 0;
@@ -505,11 +528,14 @@ namespace Opc.Ua.Schema.Binary
         #endregion
 
         #region Private Fields
-        private readonly string[][] WellKnownDictionaries = new string[][]
+        /// <summary>
+        /// Well known embedded binary schemas.
+        /// </summary>
+        protected readonly static string[][] WellKnownDictionaries = new string[][]
         {
-            new string[] { Namespaces.OpcBinarySchema,   "Opc.Ua.Core.Types.Schemas.StandardTypes.bsd" },
-            new string[] { Namespaces.OpcUaBuiltInTypes, "Opc.Ua.Core.Types.Schemas.BuiltInTypes.bsd"  },
-            new string[] { Namespaces.OpcUa, "Opc.Ua.Core.Schema.Opc.Ua.Types.bsd"  }
+            new string[] { Namespaces.OpcBinarySchema,   "Opc.Ua.Types.Schemas.StandardTypes.bsd" },
+            new string[] { Namespaces.OpcUaBuiltInTypes, "Opc.Ua.Types.Schemas.BuiltInTypes.bsd"  },
+            new string[] { Namespaces.OpcUa, "Opc.Ua.Schema.Opc.Ua.Types.bsd"  }
         };
 
         private Dictionary<XmlQualifiedName, TypeDescription> m_descriptions;

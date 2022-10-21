@@ -1,6 +1,6 @@
-/* Copyright (c) 1996-2019 The OPC Foundation. All rights reserved.
+/* Copyright (c) 1996-2022 The OPC Foundation. All rights reserved.
    The source code in this file is covered under a dual-license scenario:
-     - RCL: for OPC Foundation members in good-standing
+     - RCL: for OPC Foundation Corporate Members in good-standing
      - GPL V2: everybody else
    RCL license terms accompanied with this source code. See http://opcfoundation.org/License/RCL/1.00/
    GNU General Public License as published by the Free Software Foundation;
@@ -26,7 +26,7 @@ namespace Opc.Ua.Test
         /// <summary>
         /// Constructs an instance of the data comparer.
         /// </summary>
-        public DataComparer(ServiceMessageContext context)
+        public DataComparer(IServiceMessageContext context)
         {
             m_context = context;
             m_throwOnError = true;
@@ -300,15 +300,8 @@ namespace Opc.Ua.Test
         {
             if (value1.Kind != value2.Kind)
             {
-                if (value1.Kind != DateTimeKind.Utc)
-                {
-                    value1 = value1.ToUniversalTime();
-                }
-
-                if (value2.Kind != DateTimeKind.Utc)
-                {
-                    value2 = value2.ToUniversalTime();
-                }
+                value1 = Utils.ToOpcUaUniversalTime(value1);
+                value2 = Utils.ToOpcUaUniversalTime(value2);
             }
 
             if (value1 < Utils.TimeBase)
@@ -328,7 +321,6 @@ namespace Opc.Ua.Test
 
             // allow milliseconds to be truncated.
             return Math.Abs((value1 - value2).Ticks) < 10000;
-
         }
         #endregion
 
@@ -917,7 +909,7 @@ namespace Opc.Ua.Test
         /// <summary>
         /// The factory to use when decoding extension objects.
         /// </summary>        
-        public static EncodeableFactory EncodeableFactory
+        public static IEncodeableFactory EncodeableFactory
         {
             get
             {
@@ -932,7 +924,7 @@ namespace Opc.Ua.Test
         }
 
         // It stores encodable types of the executing assembly.       
-        private static EncodeableFactory s_Factory = new EncodeableFactory();
+        private static IEncodeableFactory s_Factory = new EncodeableFactory();
 
         /// <summary>
         /// Extracts the extension object body.
@@ -957,14 +949,15 @@ namespace Opc.Ua.Test
                 return body;
             }
 
-            ServiceMessageContext context = new ServiceMessageContext();
-            context.Factory = EncodeableFactory;
+            IServiceMessageContext context = new ServiceMessageContext() {
+                Factory = EncodeableFactory
+            };
 
             XmlElement xml = body as XmlElement;
 
             if (xml != null)
             {
-                XmlQualifiedName xmlName = EncodeableFactory.GetXmlName(expectedType);
+                XmlQualifiedName xmlName = Opc.Ua.EncodeableFactory.GetXmlName(expectedType);
                 XmlDecoder decoder = new XmlDecoder(xml, context);
 
                 decoder.PushNamespace(xmlName.Namespace);
@@ -1176,7 +1169,7 @@ namespace Opc.Ua.Test
         #endregion
 
         #region Private Fields
-        private ServiceMessageContext m_context;
+        private IServiceMessageContext m_context;
         private bool m_throwOnError;
         #endregion
     }

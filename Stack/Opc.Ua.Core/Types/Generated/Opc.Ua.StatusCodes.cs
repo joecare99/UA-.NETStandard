@@ -1,5 +1,5 @@
 /* ========================================================================
- * Copyright (c) 2005-2019 The OPC Foundation, Inc. All rights reserved.
+ * Copyright (c) 2005-2022 The OPC Foundation, Inc. All rights reserved.
  *
  * OPC Foundation MIT License 1.00
  * 
@@ -36,7 +36,7 @@ namespace Opc.Ua
     /// A class that defines constants used by UA applications.
     /// </summary>
     /// <exclude />
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("Opc.Ua.CodeGenerator", "1.0.0.0")]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("Opc.Ua.ModelCompiler", "1.0.0.0")]
     public static partial class StatusCodes
     {
         /// <summary>
@@ -775,6 +775,11 @@ namespace Opc.Ua
         public const uint BadSequenceNumberUnknown = 0x807A0000;
 
         /// <summary>
+        /// The Server does not support retransmission queue and acknowledgement of sequence numbers is not available.
+        /// </summary>
+        public const uint GoodRetransmissionQueueNotSupported = 0x00DF0000;
+
+        /// <summary>
         /// The requested notification message is no longer available.
         /// </summary>
         public const uint BadMessageNotAvailable = 0x807B0000;
@@ -810,7 +815,7 @@ namespace Opc.Ua
         public const uint BadTcpSecureChannelUnknown = 0x807F0000;
 
         /// <summary>
-        /// The size of the message specified in the header is too large.
+        /// The size of the message chunk specified in the header is too large.
         /// </summary>
         public const uint BadTcpMessageTooLarge = 0x80800000;
 
@@ -1095,6 +1100,16 @@ namespace Opc.Ua
         public const uint BadRequestNotComplete = 0x81130000;
 
         /// <summary>
+        /// The device identity needs a ticket before it can be accepted.
+        /// </summary>
+        public const uint BadTicketRequired = 0x811F0000;
+
+        /// <summary>
+        /// The device identity needs a ticket before it can be accepted.
+        /// </summary>
+        public const uint BadTicketInvalid = 0x81200000;
+
+        /// <summary>
         /// The value does not come from the real source and has been edited by the server.
         /// </summary>
         public const uint GoodEdited = 0x00DC0000;
@@ -1128,6 +1143,51 @@ namespace Opc.Ua
         /// A dependent value has been changed but the change has not been applied to the device. The quality of the dominant variable is Bad.
         /// </summary>
         public const uint BadDependentValueChanged = 0x80E30000;
+
+        /// <summary>
+        /// It is delivered with a dominant Variable value when a dependent Variable has changed but the change has not been applied.
+        /// </summary>
+        public const uint GoodEdited_DependentValueChanged = 0x01160000;
+
+        /// <summary>
+        /// It is delivered with a dependent Variable value when a dominant Variable has changed but the change has not been applied.
+        /// </summary>
+        public const uint GoodEdited_DominantValueChanged = 0x01170000;
+
+        /// <summary>
+        /// It is delivered with a dependent Variable value when a dominant or dependent Variable has changed but change has not been applied.
+        /// </summary>
+        public const uint GoodEdited_DominantValueChanged_DependentValueChanged = 0x01180000;
+
+        /// <summary>
+        /// It is delivered with a Variable value when Variable has changed but the value is not legal.
+        /// </summary>
+        public const uint BadEdited_OutOfRange = 0x81190000;
+
+        /// <summary>
+        /// It is delivered with a Variable value when a source Variable has changed but the value is not legal.
+        /// </summary>
+        public const uint BadInitialValue_OutOfRange = 0x811A0000;
+
+        /// <summary>
+        /// It is delivered with a dependent Variable value when a dominant Variable has changed and the value is not legal.
+        /// </summary>
+        public const uint BadOutOfRange_DominantValueChanged = 0x811B0000;
+
+        /// <summary>
+        /// It is delivered with a dependent Variable value when a dominant Variable has changed, the value is not legal and the change has not been applied.
+        /// </summary>
+        public const uint BadEdited_OutOfRange_DominantValueChanged = 0x811C0000;
+
+        /// <summary>
+        /// It is delivered with a dependent Variable value when a dominant or dependent Variable has changed and the value is not legal.
+        /// </summary>
+        public const uint BadOutOfRange_DominantValueChanged_DependentValueChanged = 0x811D0000;
+
+        /// <summary>
+        /// It is delivered with a dependent Variable value when a dominant or dependent Variable has changed, the value is not legal and the change has not been applied.
+        /// </summary>
+        public const uint BadEdited_OutOfRange_DominantValueChanged_DependentValueChanged = 0x811E0000;
 
         /// <summary>
         /// The communication layer has raised an event.
@@ -1213,5 +1273,60 @@ namespace Opc.Ua
         /// The operation could not be finished because all available connections are in use.
         /// </summary>
         public const uint BadMaxConnectionsReached = 0x80B70000;
+
+        /// <summary>
+        /// The value may not be accurate because the transducer is in manual mode.
+        /// </summary>
+        public const uint UncertainTransducerInManual = 0x42080000;
+
+        /// <summary>
+        /// The value is simulated.
+        /// </summary>
+        public const uint UncertainSimulatedValue = 0x42090000;
+
+        /// <summary>
+        /// The value may not be accurate due to a sensor calibration fault.
+        /// </summary>
+        public const uint UncertainSensorCalibration = 0x420A0000;
+
+        /// <summary>
+        /// The value may not be accurate due to a configuration issue.
+        /// </summary>
+        public const uint UncertainConfigurationError = 0x420F0000;
+
+        /// <summary>
+        /// The value source supports cascade handshaking and the value has been Initialized based on an initialization request from a cascade secondary.
+        /// </summary>
+        public const uint GoodCascadeInitializationAcknowledged = 0x04010000;
+
+        /// <summary>
+        /// The value source supports cascade handshaking and is requesting initialization of a cascade primary.
+        /// </summary>
+        public const uint GoodCascadeInitializationRequest = 0x04020000;
+
+        /// <summary>
+        /// The value source supports cascade handshaking, however, the source’s current state does not allow for cascade.
+        /// </summary>
+        public const uint GoodCascadeNotInvited = 0x04030000;
+
+        /// <summary>
+        /// The value source supports cascade handshaking, however, the source has not selected the corresponding cascade primary for use.
+        /// </summary>
+        public const uint GoodCascadeNotSelected = 0x04040000;
+
+        /// <summary>
+        /// There is a fault state condition active in the value source.
+        /// </summary>
+        public const uint GoodFaultStateActive = 0x04070000;
+
+        /// <summary>
+        /// A fault state condition is being requested of the destination.
+        /// </summary>
+        public const uint GoodInitiateFaultState = 0x04080000;
+
+        /// <summary>
+        /// The value is accurate, and the signal source supports cascade handshaking.
+        /// </summary>
+        public const uint GoodCascade = 0x04090000;
     }
 }

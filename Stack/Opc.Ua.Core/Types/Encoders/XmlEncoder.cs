@@ -1,6 +1,6 @@
-/* Copyright (c) 1996-2019 The OPC Foundation. All rights reserved.
+/* Copyright (c) 1996-2022 The OPC Foundation. All rights reserved.
    The source code in this file is covered under a dual-license scenario:
-     - RCL: for OPC Foundation members in good-standing
+     - RCL: for OPC Foundation Corporate Members in good-standing
      - GPL V2: everybody else
    RCL license terms accompanied with this source code. See http://opcfoundation.org/License/RCL/1.00/
    GNU General Public License as published by the Free Software Foundation;
@@ -12,14 +12,13 @@
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
 using System.Text;
 using System.Xml;
-using System.Globalization;
-using System.Reflection;
-using System.IO;
 
 namespace Opc.Ua
-{    
+{
     /// <summary>
     /// Writes objects to a XML stream.
     /// </summary>
@@ -29,25 +28,27 @@ namespace Opc.Ua
         /// <summary>
         /// Initializes the object with default values.
         /// </summary>
-        public XmlEncoder(ServiceMessageContext context)
+        public XmlEncoder(IServiceMessageContext context)
         {
             Initialize();
 
             m_destination = new StringBuilder();
-            m_context     = context;
+            m_context = context;
             m_nestingLevel = 0;
 
-            XmlWriterSettings settings = new XmlWriterSettings();
+            XmlWriterSettings settings = Utils.DefaultXmlWriterSettings();
             settings.CheckCharacters = false;
             settings.ConformanceLevel = ConformanceLevel.Auto;
+            settings.NamespaceHandling = NamespaceHandling.OmitDuplicates;
+            settings.NewLineHandling = NewLineHandling.Replace;
 
             m_writer = XmlWriter.Create(m_destination, settings);
-        }     
-                
+        }
+
         /// <summary>
         /// Initializes the object with a system type to encode and a XML writer.
         /// </summary>
-        public XmlEncoder(System.Type systemType, XmlWriter writer, ServiceMessageContext context)
+        public XmlEncoder(System.Type systemType, XmlWriter writer, IServiceMessageContext context)
         :
             this(EncodeableFactory.GetXmlName(systemType), writer, context)
         {
@@ -56,7 +57,7 @@ namespace Opc.Ua
         /// <summary>
         /// Initializes the object with a system type to encode and a XML writer.
         /// </summary>
-        public XmlEncoder(XmlQualifiedName root, XmlWriter writer, ServiceMessageContext context)
+        public XmlEncoder(XmlQualifiedName root, XmlWriter writer, IServiceMessageContext context)
         {
             Initialize();
 
@@ -76,20 +77,20 @@ namespace Opc.Ua
             m_nestingLevel = 0;
         }
 
-		/// <summary>
-		/// Sets private members to default values.
-		/// </summary>
+        /// <summary>
+        /// Sets private members to default values.
+        /// </summary>
         private void Initialize()
         {
             m_destination = null;
-            m_writer      = null;
-            m_namespaces  = new Stack<string>();
-            m_root        = null;
+            m_writer = null;
+            m_namespaces = new Stack<string>();
+            m_root = null;
         }
 
-		/// <summary>
-		/// Writes the root element to the stream.
-		/// </summary>
+        /// <summary>
+        /// Writes the root element to the stream.
+        /// </summary>
         private void Initialize(string fieldName, string namespaceUri)
         {
             m_root = new XmlQualifiedName(fieldName, namespaceUri);
@@ -123,7 +124,7 @@ namespace Opc.Ua
             {
                 m_writer.WriteAttributeString("xmlns", "uax", null, Namespaces.OpcUaXsd);
             }
-            
+
             PushNamespace(namespaceUri);
         }
         #endregion
@@ -224,13 +225,13 @@ namespace Opc.Ua
             return null;
         }
         #endregion
-        
+
         #region IDisposable Members
         /// <summary>
         /// Frees any unmanaged resources.
         /// </summary>
         public void Dispose()
-        {   
+        {
             Dispose(true);
         }
 
@@ -239,7 +240,7 @@ namespace Opc.Ua
         /// </summary>
         protected virtual void Dispose(bool disposing)
         {
-            if (disposing) 
+            if (disposing)
             {
                 if (m_writer != null)
                 {
@@ -255,18 +256,12 @@ namespace Opc.Ua
         /// <summary>
         /// The type of encoding being used.
         /// </summary>
-        public EncodingType EncodingType 
-        {
-            get { return EncodingType.Xml; }
-        }
+        public EncodingType EncodingType => EncodingType.Xml;
 
         /// <summary>
         /// The message context associated with the encoder.
         /// </summary>
-        public ServiceMessageContext Context 
-        {
-            get { return m_context; }
-        }
+        public IServiceMessageContext Context => m_context;
 
         /// <summary>
         /// Xml Encoder always produces reversible encoding.
@@ -280,7 +275,7 @@ namespace Opc.Ua
         {
             m_namespaces.Push(namespaceUri);
         }
-        
+
         /// <summary>
         /// Pops a namespace from the namespace stack.
         /// </summary>
@@ -300,108 +295,108 @@ namespace Opc.Ua
                 EndField(fieldName);
             }
         }
-        
+
         /// <summary>
         /// Writes a sbyte to the stream.
         /// </summary>
         public void WriteSByte(string fieldName, sbyte value)
-        {            
+        {
             if (BeginField(fieldName, false, false))
             {
                 m_writer.WriteValue(value);
                 EndField(fieldName);
             }
         }
-        
+
         /// <summary>
         /// Writes a byte to the stream.
         /// </summary>
         public void WriteByte(string fieldName, byte value)
-        {            
+        {
             if (BeginField(fieldName, false, false))
             {
                 m_writer.WriteValue(value);
                 EndField(fieldName);
             }
         }
-        
+
         /// <summary>
         /// Writes a short to the stream.
         /// </summary>
         public void WriteInt16(string fieldName, short value)
-        {            
+        {
             if (BeginField(fieldName, false, false))
             {
                 m_writer.WriteValue(value);
                 EndField(fieldName);
             }
         }
-        
+
         /// <summary>
         /// Writes a ushort to the stream.
         /// </summary>
         public void WriteUInt16(string fieldName, ushort value)
-        {            
+        {
             if (BeginField(fieldName, false, false))
             {
                 m_writer.WriteValue(value);
                 EndField(fieldName);
             }
         }
-        
+
         /// <summary>
         /// Writes an int to the stream.
         /// </summary>
         public void WriteInt32(string fieldName, int value)
-        {            
+        {
             if (BeginField(fieldName, false, false))
             {
                 m_writer.WriteValue(value);
                 EndField(fieldName);
             }
         }
-        
+
         /// <summary>
         /// Writes a uint to the stream.
         /// </summary>
         public void WriteUInt32(string fieldName, uint value)
-        {            
+        {
             if (BeginField(fieldName, false, false))
             {
                 m_writer.WriteValue(value);
                 EndField(fieldName);
             }
         }
-        
+
         /// <summary>
         /// Writes a long to the stream.
         /// </summary>
         public void WriteInt64(string fieldName, long value)
-        {            
+        {
             if (BeginField(fieldName, false, false))
             {
                 m_writer.WriteValue(value);
                 EndField(fieldName);
             }
         }
-        
+
         /// <summary>
         /// Writes a ulong to the stream.
         /// </summary>
         public void WriteUInt64(string fieldName, ulong value)
-        {            
+        {
             if (BeginField(fieldName, false, false))
             {
                 m_writer.WriteValue(XmlConvert.ToString(value));
                 EndField(fieldName);
             }
         }
-        
+
         /// <summary>
         /// Writes a float to the stream.
         /// </summary>
         public void WriteFloat(string fieldName, float value)
-        {            
+        {
             if (BeginField(fieldName, false, false))
             {
                 if (Single.IsNaN(value))
@@ -411,7 +406,7 @@ namespace Opc.Ua
                 else if (Single.IsPositiveInfinity(value))
                 {
                     m_writer.WriteValue("INF");
-                }                
+                }
                 else if (Single.IsNegativeInfinity(value))
                 {
                     m_writer.WriteValue("-INF");
@@ -424,25 +419,30 @@ namespace Opc.Ua
                 EndField(fieldName);
             }
         }
-        
+
         /// <summary>
         /// Writes a double to the stream.
         /// </summary>
         public void WriteDouble(string fieldName, double value)
-        {            
+        {
             if (BeginField(fieldName, false, false))
             {
                 m_writer.WriteValue(value);
                 EndField(fieldName);
             }
         }
-        
+
         /// <summary>
         /// Writes a string to the stream.
         /// </summary>
         public void WriteString(string fieldName, string value)
         {
-            if (BeginField(fieldName, value == null, true))
+            WriteString(fieldName, value, false);
+        }
+
+        private void WriteString(string fieldName, string value, bool isArrayElement)
+        {
+            if (BeginField(fieldName, value == null, true, isArrayElement))
             {
                 // check the length.
                 if (m_context.MaxStringLength > 0 && m_context.MaxStringLength < value.Length)
@@ -450,28 +450,33 @@ namespace Opc.Ua
                     throw new ServiceResultException(StatusCodes.BadEncodingLimitsExceeded);
                 }
 
-                m_writer.WriteString(value);
+                if (!String.IsNullOrWhiteSpace(value))
+                {
+                    m_writer.WriteString(value);
+                }
+
                 EndField(fieldName);
             }
         }
-        
+
         /// <summary>
         /// Writes a UTC date/time to the stream.
         /// </summary>
         public void WriteDateTime(string fieldName, DateTime value)
-        {       
+        {
             if (BeginField(fieldName, false, false))
             {
-                m_writer.WriteValue(value.ToUniversalTime());
+                value = Utils.ToOpcUaUniversalTime(value);
+                m_writer.WriteValue(value);
                 EndField(fieldName);
             }
         }
-        
+
         /// <summary>
         /// Writes a GUID to the stream.
         /// </summary>
         public void WriteGuid(string fieldName, Uuid value)
-        {            
+        {
             if (BeginField(fieldName, false, false))
             {
                 PushNamespace(Namespaces.OpcUaXsd);
@@ -496,13 +501,18 @@ namespace Opc.Ua
                 EndField(fieldName);
             }
         }
-        
+
         /// <summary>
         /// Writes a byte string to the stream.
         /// </summary>
         public void WriteByteString(string fieldName, byte[] value)
-        {            
-            if (BeginField(fieldName, value == null, true))
+        {
+            WriteByteString(fieldName, value, false);
+        }
+
+        private void WriteByteString(string fieldName, byte[] value, bool isArrayElement = false)
+        {
+            if (BeginField(fieldName, value == null, true, isArrayElement))
             {
                 // check the length.
                 if (m_context.MaxByteStringLength > 0 && m_context.MaxByteStringLength < value.Length)
@@ -510,7 +520,7 @@ namespace Opc.Ua
                     throw new ServiceResultException(StatusCodes.BadEncodingLimitsExceeded);
                 }
 
-                m_writer.WriteValue(Convert.ToBase64String(value));
+                m_writer.WriteValue(Convert.ToBase64String(value, Base64FormattingOptions.InsertLineBreaks));
                 EndField(fieldName);
             }
         }
@@ -519,8 +529,13 @@ namespace Opc.Ua
         /// Writes an XmlElement to the stream.
         /// </summary>
         public void WriteXmlElement(string fieldName, XmlElement value)
-        {            
-            if (BeginField(fieldName, value == null, true))
+        {
+            WriteXmlElement(fieldName, value, false);
+        }
+
+        private void WriteXmlElement(string fieldName, XmlElement value, bool isArrayElement)
+        {
+            if (BeginField(fieldName, value == null, true, isArrayElement))
             {
                 m_writer.WriteRaw(value.OuterXml);
                 EndField(fieldName);
@@ -555,7 +570,7 @@ namespace Opc.Ua
                 EndField(fieldName);
             }
         }
-        
+
         /// <summary>
         /// Writes an ExpandedNodeId to the stream.
         /// </summary>
@@ -591,7 +606,7 @@ namespace Opc.Ua
                 EndField(fieldName);
             }
         }
-        
+
         /// <summary>
         /// Writes an StatusCode to the stream.
         /// </summary>
@@ -601,10 +616,7 @@ namespace Opc.Ua
             {
                 PushNamespace(Namespaces.OpcUaXsd);
 
-                if (value != null)
-                {
-                    WriteUInt32("Code", value.Code);
-                }
+                WriteUInt32("Code", value.Code);
 
                 PopNamespace();
 
@@ -674,7 +686,7 @@ namespace Opc.Ua
                 }
 
                 PopNamespace();
-                
+
                 EndField(fieldName);
             }
         }
@@ -687,15 +699,22 @@ namespace Opc.Ua
             if (BeginField(fieldName, value == null, true))
             {
                 PushNamespace(Namespaces.OpcUaXsd);
-                
+
                 if (value != null)
                 {
-                    WriteString("Locale", value.Locale);
-                    WriteString("Text", value.Text);
+                    if (!String.IsNullOrEmpty(value.Locale))
+                    {
+                        WriteString("Locale", value.Locale);
+                    }
+
+                    if (!String.IsNullOrEmpty(value.Text))
+                    {
+                        WriteString("Text", value.Text);
+                    }
                 }
 
                 PopNamespace();
-                
+
                 EndField(fieldName);
             }
         }
@@ -731,7 +750,7 @@ namespace Opc.Ua
 
             m_nestingLevel--;
         }
-        
+
         /// <summary>
         /// Writes an DataValue array to the stream.
         /// </summary>
@@ -752,28 +771,28 @@ namespace Opc.Ua
                 }
 
                 PopNamespace();
-                
+
                 EndField(fieldName);
             }
-        }                
+        }
 
         /// <summary>
         /// Writes an ExtensionObject to the stream.
         /// </summary>
         public void WriteExtensionObject(string fieldName, ExtensionObject value)
-        {           
+        {
             if (BeginField(fieldName, value == null, true))
-            {             
+            {
                 PushNamespace(Namespaces.OpcUaXsd);
-                    
+
                 // check for null.
                 if (value == null)
                 {
                     EndField(fieldName);
-                    PopNamespace();        
+                    PopNamespace();
                     return;
                 }
-                
+
                 IEncodeable encodeable = value.Body as IEncodeable;
 
                 // write the type id.
@@ -806,31 +825,31 @@ namespace Opc.Ua
 
                     localTypeId = NodeId.Null;
                 }
-                
+
                 WriteNodeId("TypeId", localTypeId);
-                
+
                 object body = value.Body;
 
                 if (body == null)
                 {
                     EndField(fieldName);
-                    PopNamespace();        
+                    PopNamespace();
                     return;
                 }
-                
+
                 // write the body.
                 m_writer.WriteStartElement("Body", Namespaces.OpcUaXsd);
 
                 WriteExtensionObjectBody(body);
-                
+
                 // end of body.
                 m_writer.WriteEndElement();
- 
+
                 EndField(fieldName);
-                PopNamespace();               
+                PopNamespace();
             }
         }
-          
+
         /// <summary>
         /// Writes an encodeable object to the stream.
         /// </summary>
@@ -869,7 +888,16 @@ namespace Opc.Ua
             {
                 if (value != null)
                 {
-                    m_writer.WriteString(Utils.Format("{0}_{1}", value.ToString(), Convert.ToInt32(value, CultureInfo.InvariantCulture)));
+                    var valueSymbol = value.ToString();
+                    var valueInt32 = Convert.ToInt32(value, CultureInfo.InvariantCulture).ToString();
+                    if (valueSymbol != valueInt32)
+                    {
+                        m_writer.WriteString(Utils.Format("{0}_{1}", valueSymbol, valueInt32));
+                    }
+                    else
+                    {
+                        m_writer.WriteString(valueSymbol);
+                    }
                 }
 
                 EndField(fieldName);
@@ -881,7 +909,7 @@ namespace Opc.Ua
         /// </summary>
         public void WriteBooleanArray(string fieldName, IList<bool> values)
         {
-            if (BeginField(fieldName, values == null, true))
+            if (BeginField(fieldName, values == null, true, true))
             {
                 // check the length.
                 if (m_context.MaxArrayLength > 0 && m_context.MaxArrayLength < values.Count)
@@ -904,13 +932,13 @@ namespace Opc.Ua
                 EndField(fieldName);
             }
         }
-        
+
         /// <summary>
         /// Writes a sbyte array to the stream.
         /// </summary>
         public void WriteSByteArray(string fieldName, IList<sbyte> values)
-        {          
-            if (BeginField(fieldName, values == null, true))
+        {
+            if (BeginField(fieldName, values == null, true, true))
             {
                 // check the length.
                 if (m_context.MaxArrayLength > 0 && m_context.MaxArrayLength < values.Count)
@@ -939,7 +967,7 @@ namespace Opc.Ua
         /// </summary>
         public void WriteByteArray(string fieldName, IList<byte> values)
         {
-            if (BeginField(fieldName, values == null, true))
+            if (BeginField(fieldName, values == null, true, true))
             {
                 // check the length.
                 if (m_context.MaxArrayLength > 0 && m_context.MaxArrayLength < values.Count)
@@ -962,13 +990,13 @@ namespace Opc.Ua
                 EndField(fieldName);
             }
         }
-        
+
         /// <summary>
         /// Writes a short array to the stream.
         /// </summary>
         public void WriteInt16Array(string fieldName, IList<short> values)
-        {            
-            if (BeginField(fieldName, values == null, true))
+        {
+            if (BeginField(fieldName, values == null, true, true))
             {
                 // check the length.
                 if (m_context.MaxArrayLength > 0 && m_context.MaxArrayLength < values.Count)
@@ -991,13 +1019,13 @@ namespace Opc.Ua
                 EndField(fieldName);
             }
         }
-        
+
         /// <summary>
         /// Writes a ushort array to the stream.
         /// </summary>
         public void WriteUInt16Array(string fieldName, IList<ushort> values)
-        {            
-            if (BeginField(fieldName, values == null, true))
+        {
+            if (BeginField(fieldName, values == null, true, true))
             {
                 // check the length.
                 if (m_context.MaxArrayLength > 0 && m_context.MaxArrayLength < values.Count)
@@ -1020,13 +1048,13 @@ namespace Opc.Ua
                 EndField(fieldName);
             }
         }
-        
+
         /// <summary>
         /// Writes a int array to the stream.
         /// </summary>
         public void WriteInt32Array(string fieldName, IList<int> values)
-        {            
-            if (BeginField(fieldName, values == null, true))
+        {
+            if (BeginField(fieldName, values == null, true, true))
             {
                 // check the length.
                 if (m_context.MaxArrayLength > 0 && m_context.MaxArrayLength < values.Count)
@@ -1049,13 +1077,13 @@ namespace Opc.Ua
                 EndField(fieldName);
             }
         }
-        
+
         /// <summary>
         /// Writes a uint array to the stream.
         /// </summary>
         public void WriteUInt32Array(string fieldName, IList<uint> values)
-        {            
-            if (BeginField(fieldName, values == null, true))
+        {
+            if (BeginField(fieldName, values == null, true, true))
             {
                 // check the length.
                 if (m_context.MaxArrayLength > 0 && m_context.MaxArrayLength < values.Count)
@@ -1078,13 +1106,13 @@ namespace Opc.Ua
                 EndField(fieldName);
             }
         }
-        
+
         /// <summary>
         /// Writes a long array to the stream.
         /// </summary>
         public void WriteInt64Array(string fieldName, IList<long> values)
-        {            
-            if (BeginField(fieldName, values == null, true))
+        {
+            if (BeginField(fieldName, values == null, true, true))
             {
                 // check the length.
                 if (m_context.MaxArrayLength > 0 && m_context.MaxArrayLength < values.Count)
@@ -1107,13 +1135,13 @@ namespace Opc.Ua
                 EndField(fieldName);
             }
         }
-        
+
         /// <summary>
         /// Writes a ulong array to the stream.
         /// </summary>
         public void WriteUInt64Array(string fieldName, IList<ulong> values)
-        {            
-            if (BeginField(fieldName, values == null, true))
+        {
+            if (BeginField(fieldName, values == null, true, true))
             {
                 // check the length.
                 if (m_context.MaxArrayLength > 0 && m_context.MaxArrayLength < values.Count)
@@ -1136,13 +1164,13 @@ namespace Opc.Ua
                 EndField(fieldName);
             }
         }
-                
+
         /// <summary>
         /// Writes a float array to the stream.
         /// </summary>
         public void WriteFloatArray(string fieldName, IList<float> values)
-        {            
-            if (BeginField(fieldName, values == null, true))
+        {
+            if (BeginField(fieldName, values == null, true, true))
             {
                 // check the length.
                 if (m_context.MaxArrayLength > 0 && m_context.MaxArrayLength < values.Count)
@@ -1165,13 +1193,13 @@ namespace Opc.Ua
                 EndField(fieldName);
             }
         }
-        
+
         /// <summary>
         /// Writes a double array to the stream.
         /// </summary>
         public void WriteDoubleArray(string fieldName, IList<double> values)
-        {            
-            if (BeginField(fieldName, values == null, true))
+        {
+            if (BeginField(fieldName, values == null, true, true))
             {
                 // check the length.
                 if (m_context.MaxArrayLength > 0 && m_context.MaxArrayLength < values.Count)
@@ -1194,13 +1222,13 @@ namespace Opc.Ua
                 EndField(fieldName);
             }
         }
-        
+
         /// <summary>
         /// Writes a string array to the stream.
         /// </summary>
         public void WriteStringArray(string fieldName, IList<string> values)
-        {             
-            if (BeginField(fieldName, values == null, true))
+        {
+            if (BeginField(fieldName, values == null, true, true))
             {
                 // check the length.
                 if (m_context.MaxArrayLength > 0 && m_context.MaxArrayLength < values.Count)
@@ -1214,22 +1242,22 @@ namespace Opc.Ua
                 {
                     for (int ii = 0; ii < values.Count; ii++)
                     {
-                        WriteString("String", values[ii]);
+                        WriteString("String", values[ii], true);
                     }
                 }
-                
+
                 PopNamespace();
 
                 EndField(fieldName);
-            }     
+            }
         }
-        
+
         /// <summary>
         /// Writes a UTC date/time array to the stream.
         /// </summary>
         public void WriteDateTimeArray(string fieldName, IList<DateTime> values)
-        {            
-            if (BeginField(fieldName, values == null, true))
+        {
+            if (BeginField(fieldName, values == null, true, true))
             {
                 // check the length.
                 if (m_context.MaxArrayLength > 0 && m_context.MaxArrayLength < values.Count)
@@ -1250,15 +1278,15 @@ namespace Opc.Ua
                 PopNamespace();
 
                 EndField(fieldName);
-            }    
+            }
         }
-        
+
         /// <summary>
         /// Writes a GUID array to the stream.
         /// </summary>
         public void WriteGuidArray(string fieldName, IList<Uuid> values)
-        {            
-            if (BeginField(fieldName, values == null, true))
+        {
+            if (BeginField(fieldName, values == null, true, true))
             {
                 // check the length.
                 if (m_context.MaxArrayLength > 0 && m_context.MaxArrayLength < values.Count)
@@ -1287,7 +1315,7 @@ namespace Opc.Ua
         /// </summary>
         public void WriteGuidArray(string fieldName, IList<Guid> values)
         {
-            if (BeginField(fieldName, values == null, true))
+            if (BeginField(fieldName, values == null, true, true))
             {
                 // check the length.
                 if (m_context.MaxArrayLength > 0 && m_context.MaxArrayLength < values.Count)
@@ -1310,13 +1338,13 @@ namespace Opc.Ua
                 EndField(fieldName);
             }
         }
-        
+
         /// <summary>
         /// Writes a byte string array to the stream.
         /// </summary>
         public void WriteByteStringArray(string fieldName, IList<byte[]> values)
-        {            
-            if (BeginField(fieldName, values == null, true))
+        {
+            if (BeginField(fieldName, values == null, true, true))
             {
                 // check the length.
                 if (m_context.MaxArrayLength > 0 && m_context.MaxArrayLength < values.Count)
@@ -1330,7 +1358,7 @@ namespace Opc.Ua
                 {
                     for (int ii = 0; ii < values.Count; ii++)
                     {
-                        WriteByteString("ByteString", values[ii]);
+                        WriteByteString("ByteString", values[ii], true);
                     }
                 }
 
@@ -1345,7 +1373,7 @@ namespace Opc.Ua
         /// </summary>
         public void WriteXmlElementArray(string fieldName, IList<XmlElement> values)
         {
-            if (BeginField(fieldName, values == null, true))
+            if (BeginField(fieldName, values == null, true, true))
             {
                 // check the length.
                 if (m_context.MaxArrayLength > 0 && m_context.MaxArrayLength < values.Count)
@@ -1359,7 +1387,7 @@ namespace Opc.Ua
                 {
                     for (int ii = 0; ii < values.Count; ii++)
                     {
-                        WriteXmlElement("XmlElement", values[ii]);
+                        WriteXmlElement("XmlElement", values[ii], true);
                     }
                 }
 
@@ -1368,13 +1396,13 @@ namespace Opc.Ua
                 EndField(fieldName);
             }
         }
-                
+
         /// <summary>
         /// Writes an NodeId array to the stream.
         /// </summary>
         public void WriteNodeIdArray(string fieldName, IList<NodeId> values)
         {
-            if (BeginField(fieldName, values == null, true))
+            if (BeginField(fieldName, values == null, true, true))
             {
                 // check the length.
                 if (m_context.MaxArrayLength > 0 && m_context.MaxArrayLength < values.Count)
@@ -1393,17 +1421,17 @@ namespace Opc.Ua
                 }
 
                 PopNamespace();
-                
+
                 EndField(fieldName);
             }
         }
-        
+
         /// <summary>
         /// Writes an ExpandedNodeId array to the stream.
         /// </summary>
         public void WriteExpandedNodeIdArray(string fieldName, IList<ExpandedNodeId> values)
         {
-            if (BeginField(fieldName, values == null, true))
+            if (BeginField(fieldName, values == null, true, true))
             {
                 // check the length.
                 if (m_context.MaxArrayLength > 0 && m_context.MaxArrayLength < values.Count)
@@ -1431,8 +1459,8 @@ namespace Opc.Ua
         /// Writes an StatusCode array to the stream.
         /// </summary>
         public void WriteStatusCodeArray(string fieldName, IList<StatusCode> values)
-        {            
-            if (BeginField(fieldName, values == null, true))
+        {
+            if (BeginField(fieldName, values == null, true, true))
             {
                 // check the length.
                 if (m_context.MaxArrayLength > 0 && m_context.MaxArrayLength < values.Count)
@@ -1461,7 +1489,7 @@ namespace Opc.Ua
         /// </summary>
         public void WriteDiagnosticInfoArray(string fieldName, IList<DiagnosticInfo> values)
         {
-            if (BeginField(fieldName, values == null, true))
+            if (BeginField(fieldName, values == null, true, true))
             {
                 // check the length.
                 if (m_context.MaxArrayLength > 0 && m_context.MaxArrayLength < values.Count)
@@ -1490,7 +1518,7 @@ namespace Opc.Ua
         /// </summary>
         public void WriteQualifiedNameArray(string fieldName, IList<QualifiedName> values)
         {
-            if (BeginField(fieldName, values == null, true))
+            if (BeginField(fieldName, values == null, true, true))
             {
                 // check the length.
                 if (m_context.MaxArrayLength > 0 && m_context.MaxArrayLength < values.Count)
@@ -1519,7 +1547,7 @@ namespace Opc.Ua
         /// </summary>
         public void WriteLocalizedTextArray(string fieldName, IList<LocalizedText> values)
         {
-            if (BeginField(fieldName, values == null, true))
+            if (BeginField(fieldName, values == null, true, true))
             {
                 // check the length.
                 if (m_context.MaxArrayLength > 0 && m_context.MaxArrayLength < values.Count)
@@ -1548,7 +1576,7 @@ namespace Opc.Ua
         /// </summary>
         public void WriteVariantArray(string fieldName, IList<Variant> values)
         {
-            if (BeginField(fieldName, values == null, true))
+            if (BeginField(fieldName, values == null, true, true))
             {
                 // check the length.
                 if (m_context.MaxArrayLength > 0 && m_context.MaxArrayLength < values.Count)
@@ -1577,7 +1605,7 @@ namespace Opc.Ua
         /// </summary>
         public void WriteDataValueArray(string fieldName, IList<DataValue> values)
         {
-            if (BeginField(fieldName, values == null, true))
+            if (BeginField(fieldName, values == null, true, true))
             {
                 // check the length.
                 if (m_context.MaxArrayLength > 0 && m_context.MaxArrayLength < values.Count)
@@ -1600,13 +1628,13 @@ namespace Opc.Ua
                 EndField(fieldName);
             }
         }
-        
+
         /// <summary>
         /// Writes an extension object array to the stream.
         /// </summary>
         public void WriteExtensionObjectArray(string fieldName, IList<ExtensionObject> values)
         {
-            if (BeginField(fieldName, values == null, true))
+            if (BeginField(fieldName, values == null, true, true))
             {
                 // check the length.
                 if (m_context.MaxArrayLength > 0 && m_context.MaxArrayLength < values.Count)
@@ -1634,8 +1662,8 @@ namespace Opc.Ua
         /// Writes an encodeable object array to the stream.
         /// </summary>
         public void WriteEncodeableArray(string fieldName, IList<IEncodeable> values, System.Type systemType)
-        {            
-            if (BeginField(fieldName, values == null, true))
+        {
+            if (BeginField(fieldName, values == null, true, true))
             {
                 // check the length.
                 if (m_context.MaxArrayLength > 0 && m_context.MaxArrayLength < values.Count)
@@ -1650,7 +1678,7 @@ namespace Opc.Ua
                 {
                     xmlName = new XmlQualifiedName("IEncodeable", Namespaces.OpcUaXsd);
                 }
-                
+
                 PushNamespace(xmlName.Namespace);
 
                 // encode each element in the array.
@@ -1676,13 +1704,13 @@ namespace Opc.Ua
                 EndField(fieldName);
             }
         }
-        
+
         /// <summary>
         /// Writes an enumerated value array to the stream.
         /// </summary>
         public void WriteEnumeratedArray(string fieldName, Array values, System.Type systemType)
-        { 
-            if (BeginField(fieldName, values == null, true))
+        {
+            if (BeginField(fieldName, values == null, true, true))
             {
                 // check the length.
                 if (m_context.MaxArrayLength > 0 && m_context.MaxArrayLength < values.Length)
@@ -1697,7 +1725,7 @@ namespace Opc.Ua
                 {
                     xmlName = new XmlQualifiedName("Enumerated", Namespaces.OpcUaXsd);
                 }
-                
+
                 PushNamespace(xmlName.Namespace);
 
                 if (values != null)
@@ -1715,7 +1743,7 @@ namespace Opc.Ua
             }
         }
         #endregion
-        
+
         #region Public Methods
         /// <summary>
         /// Writes the contents of an Variant to the stream.
@@ -1766,7 +1794,7 @@ namespace Opc.Ua
                         case BuiltInType.Enumeration: { WriteInt32("Int32", (int)value); return; }
                     }
                 }
-                
+
                 // write array.
                 else if (typeInfo.ValueRank <= 1)
                 {
@@ -1795,19 +1823,28 @@ namespace Opc.Ua
                         case BuiltInType.LocalizedText: { WriteLocalizedTextArray("ListOfLocalizedText", (LocalizedText[])value); return; }
                         case BuiltInType.ExtensionObject: { WriteExtensionObjectArray("ListOfExtensionObject", (ExtensionObject[])value); return; }
                         case BuiltInType.DataValue: { WriteDataValueArray("ListOfDataValue", (DataValue[])value); return; }
-                        
-                        case BuiltInType.Enumeration: 
-                        {
-                            Enum[] enums = value as Enum[];
-                            int[] ints = new int[enums.Length];
 
-                            for (int ii = 0; ii < enums.Length; ii++)
+                        case BuiltInType.Enumeration:
+                        {
+                            int[] ints = value as int[];
+                            if (ints == null)
                             {
-                                ints[ii] = (int)(object)enums[ii];
+                                Enum[] enums = value as Enum[];
+                                if (enums == null)
+                                {
+                                    throw new ServiceResultException(
+                                        StatusCodes.BadEncodingError,
+                                        Utils.Format("Type '{0}' is not allowed in an Enumeration.", value.GetType().FullName));
+                                }
+                                ints = new int[enums.Length];
+                                for (int ii = 0; ii < enums.Length; ii++)
+                                {
+                                    ints[ii] = (int)(object)enums[ii];
+                                }
                             }
 
                             WriteInt32Array("ListOfInt32", ints);
-                            return; 
+                            return;
                         }
 
                         case BuiltInType.Variant:
@@ -1853,12 +1890,12 @@ namespace Opc.Ua
                 PopNamespace();
             }
         }
-        
+
         /// <summary>
         /// Writes the body of an ExtensionObject to the stream.
         /// </summary>
         public void WriteExtensionObjectBody(object body)
-        {            
+        {
             // nothing to do for null bodies.
             if (body == null)
             {
@@ -1871,62 +1908,35 @@ namespace Opc.Ua
             if (bytes != null)
             {
                 m_writer.WriteStartElement("ByteString", Namespaces.OpcUaXsd);
-                m_writer.WriteString(Convert.ToBase64String(bytes));                                        
+                m_writer.WriteString(Convert.ToBase64String(bytes, Base64FormattingOptions.InsertLineBreaks));
                 m_writer.WriteEndElement();
                 return;
             }
-            
+
             // encode xml body.
             XmlElement xml = body as XmlElement;
-
             if (xml != null)
             {
-                XmlReader reader = XmlReader.Create(new StringReader(xml.OuterXml));
-                m_writer.WriteNode(reader, false);
-                reader.Dispose();
-                return;
+                using (XmlReader reader = XmlReader.Create(new StringReader(xml.OuterXml), Utils.DefaultXmlReaderSettings()))
+                {
+                    m_writer.WriteNode(reader, false);
+                    return;
+                }
             }
 
             IEncodeable encodeable = body as IEncodeable;
-
             if (encodeable == null)
             {
                 throw new ServiceResultException(
                     StatusCodes.BadEncodingError,
                     Utils.Format("Don't know how to encode extension object body with type '{0}'.", body.GetType().FullName));
             }
-            
+
             // encode extension object in xml.
             XmlQualifiedName xmlName = EncodeableFactory.GetXmlName(encodeable.GetType());
             m_writer.WriteStartElement(xmlName.Name, xmlName.Namespace);
             encodeable.Encode(this);
             m_writer.WriteEndElement();
-        }
-        #endregion
-
-        #region Private Methods
-        /// <summary>
-        /// Writes an DataValue array to the stream.
-        /// </summary>
-        private void WriteMatrix(string fieldName, Matrix value)
-        {
-            if (BeginField(fieldName, value == null, true))
-            {
-                PushNamespace(Namespaces.OpcUaXsd);
-
-                if (value != null)
-                {
-                    m_writer.WriteStartElement("Elements", Namespaces.OpcUaXsd);                
-                    WriteVariantContents(value.Elements, new TypeInfo(value.TypeInfo.BuiltInType, ValueRanks.OneDimension));                
-                    m_writer.WriteEndElement();
-
-                    WriteInt32Array("Dimensions", value.Dimensions);
-                }
-
-                PopNamespace();
-                
-                EndField(fieldName);
-            }
         }
 
         /// <summary>
@@ -1934,10 +1944,10 @@ namespace Opc.Ua
         /// </summary>
         public void WriteObjectArray(string fieldName, IList<object> values)
         {
-            if (BeginField(fieldName, values == null, true))
+            if (BeginField(fieldName, values == null, true, true))
             {
                 // check the length.
-                if (m_context.MaxArrayLength > 0 && m_context.MaxArrayLength < values.Count)
+                if (values != null && m_context.MaxArrayLength > 0 && m_context.MaxArrayLength < values.Count)
                 {
                     throw new ServiceResultException(StatusCodes.BadEncodingLimitsExceeded);
                 }
@@ -1959,13 +1969,239 @@ namespace Opc.Ua
         }
 
         /// <summary>
+        /// Encode an array according to its valueRank and BuiltInType
+        /// </summary>
+        public void WriteArray(string fieldName, object array, int valueRank, BuiltInType builtInType)
+        {
+            // check the nesting level for avoiding a stack overflow.
+            if (m_nestingLevel > m_context.MaxEncodingNestingLevels)
+            {
+                throw ServiceResultException.Create(
+                    StatusCodes.BadEncodingLimitsExceeded,
+                    "Maximum nesting level of {0} was exceeded",
+                    m_context.MaxEncodingNestingLevels);
+            }
+
+            m_nestingLevel++;
+
+            try
+            {
+                // write array.
+                if (valueRank == ValueRanks.OneDimension)
+                {
+                    try
+                    {
+                        m_namespaces.Push(Namespaces.OpcUaXsd);
+
+                        /*One dimensional Array parameters are always encoded by wrapping the elements in a container element 
+                        * and inserting the container into the structure. The name of the container element should be the name of the parameter. 
+                        * The name of the element in the array shall be the type name.*/
+                        switch (builtInType)
+                        {
+                            case BuiltInType.Boolean: { WriteBooleanArray(fieldName, (bool[])array); return; }
+                            case BuiltInType.SByte: { WriteSByteArray(fieldName, (sbyte[])array); return; }
+                            case BuiltInType.Byte: { WriteByteArray(fieldName, (byte[])array); return; }
+                            case BuiltInType.Int16: { WriteInt16Array(fieldName, (short[])array); return; }
+                            case BuiltInType.UInt16: { WriteUInt16Array(fieldName, (ushort[])array); return; }
+                            case BuiltInType.Int32: { WriteInt32Array(fieldName, (int[])array); return; }
+                            case BuiltInType.UInt32: { WriteUInt32Array(fieldName, (uint[])array); return; }
+                            case BuiltInType.Int64: { WriteInt64Array(fieldName, (long[])array); return; }
+                            case BuiltInType.UInt64: { WriteUInt64Array(fieldName, (ulong[])array); return; }
+                            case BuiltInType.Float: { WriteFloatArray(fieldName, (float[])array); return; }
+                            case BuiltInType.Double: { WriteDoubleArray(fieldName, (double[])array); return; }
+                            case BuiltInType.String: { WriteStringArray(fieldName, (string[])array); return; }
+                            case BuiltInType.DateTime: { WriteDateTimeArray(fieldName, (DateTime[])array); return; }
+                            case BuiltInType.Guid: { WriteGuidArray(fieldName, (Uuid[])array); return; }
+                            case BuiltInType.ByteString: { WriteByteStringArray(fieldName, (byte[][])array); return; }
+                            case BuiltInType.XmlElement: { WriteXmlElementArray(fieldName, (XmlElement[])array); return; }
+                            case BuiltInType.NodeId: { WriteNodeIdArray(fieldName, (NodeId[])array); return; }
+                            case BuiltInType.ExpandedNodeId: { WriteExpandedNodeIdArray(fieldName, (ExpandedNodeId[])array); return; }
+                            case BuiltInType.StatusCode: { WriteStatusCodeArray(fieldName, (StatusCode[])array); return; }
+                            case BuiltInType.QualifiedName: { WriteQualifiedNameArray(fieldName, (QualifiedName[])array); return; }
+                            case BuiltInType.LocalizedText: { WriteLocalizedTextArray(fieldName, (LocalizedText[])array); return; }
+                            case BuiltInType.ExtensionObject: { WriteExtensionObjectArray(fieldName, (ExtensionObject[])array); return; }
+                            case BuiltInType.DataValue: { WriteDataValueArray(fieldName, (DataValue[])array); return; }
+                            case BuiltInType.DiagnosticInfo: { WriteDiagnosticInfoArray(fieldName, (DiagnosticInfo[])array); return; }
+                            case BuiltInType.Enumeration:
+                            {
+                                int[] ints = array as int[];
+                                if (ints == null)
+                                {
+                                    Enum[] enums = array as Enum[];
+                                    if (enums == null)
+                                    {
+                                        throw new ServiceResultException(
+                                            StatusCodes.BadEncodingError,
+                                            Utils.Format("Type '{0}' is not allowed in an Enumeration.", array.GetType().FullName));
+                                    }
+                                    ints = new int[enums.Length];
+                                    for (int ii = 0; ii < enums.Length; ii++)
+                                    {
+                                        ints[ii] = Convert.ToInt32(enums[ii], CultureInfo.InvariantCulture);
+                                    }
+                                }
+
+                                WriteInt32Array(fieldName, ints);
+                                return;
+                            }
+
+                            case BuiltInType.Variant:
+                            {
+                                Variant[] variants = array as Variant[];
+
+                                if (variants != null)
+                                {
+                                    WriteVariantArray(fieldName, variants);
+                                    return;
+                                }
+
+                                // try to write IEncodeable Array
+                                IEncodeable[] encodeableArray = array as IEncodeable[];
+                                if (encodeableArray != null)
+                                {
+                                    WriteEncodeableArray(fieldName, encodeableArray, array.GetType().GetElementType());
+                                    return;
+                                }
+
+                                object[] objects = array as object[];
+
+                                if (objects != null)
+                                {
+                                    WriteObjectArray(fieldName, objects);
+                                    return;
+                                }
+
+                                throw ServiceResultException.Create(
+                                    StatusCodes.BadEncodingError,
+                                    "Unexpected type encountered while encoding an array of Variants: {0}",
+                                    array.GetType());
+                            }
+
+                            default:
+                            {
+                                // try to write IEncodeable Array
+                                IEncodeable[] encodeableArray = array as IEncodeable[];
+                                if (encodeableArray != null)
+                                {
+                                    WriteEncodeableArray(fieldName, encodeableArray, array.GetType().GetElementType());
+                                    return;
+                                }
+
+                                throw ServiceResultException.Create(
+                                    StatusCodes.BadEncodingError,
+                                    "Unexpected BuiltInType encountered while encoding an array: {0}",
+                                    builtInType);
+                            }
+                        }
+                    }
+                    finally
+                    {
+                        m_namespaces.Pop();
+                    }
+                }
+
+                // write matrix.
+                else if (valueRank > ValueRanks.OneDimension)
+                {
+                    /* Multi-dimensional Arrays are encoded as an Int32 Array containing the dimensions followed by 
+                     * a list of all the values in the Array. The total number of values is equal to the 
+                     * product of the dimensions.
+                     * The number of values is 0 if one or more dimension is less than or equal to 0.*/
+
+                    Matrix matrix = array as Matrix;
+                    if (matrix == null)
+                    {
+                        var multiArray = array as Array;
+                        if (multiArray != null && multiArray.Rank == valueRank)
+                        {
+                            matrix = new Matrix(multiArray, builtInType);
+                        }
+                        else
+                        {
+                            throw ServiceResultException.Create(
+                                StatusCodes.BadEncodingError,
+                                "Unexpected array type encountered while encoding array: {0}",
+                                array.GetType().Name);
+                        }
+                    }
+
+                    if (BeginField(fieldName, matrix == null, true, true))
+                    {
+                        PushNamespace(Namespaces.OpcUaXsd);
+
+                        if (matrix != null)
+                        {
+                            // dimensions element is written first
+                            WriteInt32Array("Dimensions", matrix.Dimensions);
+
+                            WriteArray("Elements", matrix.Elements, ValueRanks.OneDimension, builtInType);
+                        }
+
+                        PopNamespace();
+
+                        EndField(fieldName);
+                    }
+                }
+            }
+            finally
+            {
+                m_nestingLevel--;
+            }
+        }
+
+        #endregion
+
+        #region Private Methods
+        /// <summary>
+        /// Writes an DataValue array to the stream.
+        /// </summary>
+        private void WriteMatrix(string fieldName, Matrix value)
+        {
+            // check the nesting level for avoiding a stack overflow.
+            if (m_nestingLevel > m_context.MaxEncodingNestingLevels)
+            {
+                throw ServiceResultException.Create(
+                    StatusCodes.BadEncodingLimitsExceeded,
+                    "Maximum nesting level of {0} was exceeded",
+                    m_context.MaxEncodingNestingLevels);
+            }
+
+            m_nestingLevel++;
+
+            if (BeginField(fieldName, value == null, true, true))
+            {
+                PushNamespace(Namespaces.OpcUaXsd);
+
+                if (value != null)
+                {
+                    m_writer.WriteStartElement("Elements", Namespaces.OpcUaXsd);
+                    WriteVariantContents(value.Elements, new TypeInfo(value.TypeInfo.BuiltInType, ValueRanks.OneDimension));
+                    m_writer.WriteEndElement();
+
+                    WriteInt32Array("Dimensions", value.Dimensions);
+                }
+
+                PopNamespace();
+
+                EndField(fieldName);
+            }
+
+            m_nestingLevel--;
+        }
+
+        /// <summary>
         /// Writes the start element for a field.
         /// </summary>
-        private bool BeginField(string fieldName, bool isDefault, bool isNillable)
+        private bool BeginField(string fieldName, bool isDefault, bool isNillable, bool isArrayElement = false)
         {
             // specifying a null field name means the start/end tags should not be written.
             if (!String.IsNullOrEmpty(fieldName))
             {
+                if (isNillable && isDefault && !isArrayElement)
+                {
+                    return false;
+                }
+
                 m_writer.WriteStartElement(fieldName, m_namespaces.Peek());
 
                 if (isDefault)
@@ -1979,10 +2215,10 @@ namespace Opc.Ua
                     return false;
                 }
             }
-                 
+
             return !isDefault;
         }
-        
+
         /// <summary>
         /// Writes the end element for a field.
         /// </summary>
@@ -2000,7 +2236,7 @@ namespace Opc.Ua
         private XmlWriter m_writer;
         private Stack<string> m_namespaces;
         private XmlQualifiedName m_root;
-        private ServiceMessageContext m_context;
+        private IServiceMessageContext m_context;
         private ushort[] m_namespaceMappings;
         private ushort[] m_serverMappings;
         private uint m_nestingLevel;

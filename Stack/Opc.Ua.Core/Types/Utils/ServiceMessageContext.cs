@@ -1,6 +1,6 @@
-/* Copyright (c) 1996-2019 The OPC Foundation. All rights reserved.
+/* Copyright (c) 1996-2022 The OPC Foundation. All rights reserved.
    The source code in this file is covered under a dual-license scenario:
-     - RCL: for OPC Foundation members in good-standing
+     - RCL: for OPC Foundation Corporate Members in good-standing
      - GPL V2: everybody else
    RCL license terms accompanied with this source code. See http://opcfoundation.org/License/RCL/1.00/
    GNU General Public License as published by the Free Software Foundation;
@@ -11,58 +11,49 @@
 */
 
 using System;
-using System.Xml;
-using System.Collections.Generic;
-using System.IO;
-using System.Threading;
-using System.ServiceModel;
-using System.Runtime.Serialization;
 
 namespace Opc.Ua
 {
     /// <summary>
 	/// Stores context information associated with a UA server that is used during message processing.
 	/// </summary>
-	public class ServiceMessageContext
-	{
+	public class ServiceMessageContext : IServiceMessageContext
+    {
         #region Constructors
         /// <summary>
         /// Initializes the object with default values.
         /// </summary>
         public ServiceMessageContext()
-        {            
-            m_maxStringLength          = UInt16.MaxValue;
-            m_maxByteStringLength      = UInt16.MaxValue*16;
-            m_maxArrayLength           = UInt16.MaxValue;
-            m_maxMessageSize           = UInt16.MaxValue*32;
-            m_namespaceUris            = new NamespaceTable();
-            m_serverUris               = new StringTable();
-            m_factory                  = EncodeableFactory.GlobalFactory;
+        {
+            m_maxStringLength = UInt16.MaxValue;
+            m_maxByteStringLength = UInt16.MaxValue * 16;
+            m_maxArrayLength = UInt16.MaxValue;
+            m_maxMessageSize = UInt16.MaxValue * 32;
+            m_namespaceUris = new NamespaceTable();
+            m_serverUris = new StringTable();
+            m_factory = EncodeableFactory.GlobalFactory;
             m_maxEncodingNestingLevels = 200;
         }
 
         private ServiceMessageContext(bool shared) : this()
         {
-            m_maxStringLength          = UInt16.MaxValue;
-            m_maxByteStringLength      = UInt16.MaxValue*16;
-            m_maxArrayLength           = UInt16.MaxValue;
-            m_maxMessageSize           = UInt16.MaxValue*32;
-            m_namespaceUris            = new NamespaceTable(shared);
-            m_serverUris               = new StringTable(shared);
-            m_factory                  = EncodeableFactory.GlobalFactory;
+            m_maxStringLength = UInt16.MaxValue;
+            m_maxByteStringLength = UInt16.MaxValue * 16;
+            m_maxArrayLength = UInt16.MaxValue;
+            m_maxMessageSize = UInt16.MaxValue * 32;
+            m_namespaceUris = new NamespaceTable(shared);
+            m_serverUris = new StringTable(shared);
+            m_factory = EncodeableFactory.GlobalFactory;
             m_maxEncodingNestingLevels = 200;
         }
         #endregion
-        
-		#region Static Members
+
+        #region Static Members
         /// <summary>
         /// The default context for the process (used only during XML serialization).
         /// </summary>
-        public static ServiceMessageContext GlobalContext
-        {
-            get { return s_globalContext; }
-        }
-        
+        public static ServiceMessageContext GlobalContext => s_globalContext;
+
 
         /// <summary>
         /// The default context for the thread (used only during XML serialization).
@@ -81,20 +72,17 @@ namespace Opc.Ua
         #endregion
 
         #region Public Properties
-		/// <summary>
-		/// Returns the object used to synchronize access to the context.
-		/// </summary>
-		public object SyncRoot
-		{
-			get { return m_lock; }
-		}
+        /// <summary>
+        /// Returns the object used to synchronize access to the context.
+        /// </summary>
+        public object SyncRoot => m_lock;
 
         /// <summary>
         /// The maximum length for any string, byte string or xml element.
         /// </summary>
         public int MaxStringLength
         {
-            get { lock (m_lock) { return m_maxStringLength;  } }
+            get { lock (m_lock) { return m_maxStringLength; } }
             set { lock (m_lock) { m_maxStringLength = value; } }
         }
 
@@ -103,7 +91,7 @@ namespace Opc.Ua
         /// </summary>
         public int MaxArrayLength
         {
-            get { lock (m_lock) { return m_maxArrayLength;  } }
+            get { lock (m_lock) { return m_maxArrayLength; } }
             set { lock (m_lock) { m_maxArrayLength = value; } }
         }
 
@@ -139,22 +127,22 @@ namespace Opc.Ua
         public NamespaceTable NamespaceUris
         {
             get
-            { 
+            {
                 return m_namespaceUris;
             }
-            
-            set 
-            { 
-                lock (m_lock) 
-                { 
+
+            set
+            {
+                lock (m_lock)
+                {
                     if (value == null)
                     {
                         m_namespaceUris = ServiceMessageContext.GlobalContext.NamespaceUris;
                         return;
                     }
 
-                    m_namespaceUris = value; 
-                } 
+                    m_namespaceUris = value;
+                }
             }
         }
 
@@ -163,9 +151,9 @@ namespace Opc.Ua
         /// </summary>
         public StringTable ServerUris
         {
-            get 
+            get
             {
-                return m_serverUris; 
+                return m_serverUris;
             }
 
             set
@@ -186,31 +174,31 @@ namespace Opc.Ua
         /// <summary>
         /// The factory used to create encodeable objects.
         /// </summary>
-        public EncodeableFactory Factory
+        public IEncodeableFactory Factory
         {
             get
-            { 
-                return m_factory;  
+            {
+                return m_factory;
             }
-            
-            set 
-            { 
-                lock (m_lock) 
-                { 
+
+            set
+            {
+                lock (m_lock)
+                {
                     if (value == null)
                     {
                         m_factory = ServiceMessageContext.GlobalContext.Factory;
                         return;
                     }
 
-                    m_factory = value; 
-                } 
+                    m_factory = value;
+                }
             }
         }
         #endregion
-        
+
         #region Private Fields
-		private object m_lock = new object();
+        private object m_lock = new object();
         private int m_maxStringLength;
         private int m_maxByteStringLength;
         private int m_maxArrayLength;
@@ -218,7 +206,7 @@ namespace Opc.Ua
         private uint m_maxEncodingNestingLevels;
         private NamespaceTable m_namespaceUris;
         private StringTable m_serverUris;
-        private EncodeableFactory m_factory;
+        private IEncodeableFactory m_factory;
 
         private static ServiceMessageContext s_globalContext = new ServiceMessageContext(true);
         #endregion
