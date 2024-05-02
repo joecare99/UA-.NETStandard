@@ -33,6 +33,7 @@ using System;
 using System.Linq;
 using System.IO;
 using Opc.Ua.PubSub.Encoding;
+using Assert = NUnit.Framework.Legacy.ClassicAssert;
 
 namespace Opc.Ua.PubSub.Tests.Encoding
 {
@@ -51,7 +52,7 @@ namespace Opc.Ua.PubSub.Tests.Encoding
         private UaPubSubApplication m_subscriberApplication;
         private ReaderGroupDataType m_firstReaderGroup;
         private DataSetReaderDataType m_firstDataSetReaderType;
-        
+
         private const ushort kNamespaceIndexSimple = 2;
 
         /// <summary>
@@ -78,7 +79,7 @@ namespace Opc.Ua.PubSub.Tests.Encoding
             Assert.IsNotEmpty(m_publisherConfiguration.Connections, "m_publisherConfiguration.Connections should not be empty");
             m_firstPublisherConnection = m_publisherApplication.PubSubConnections[0];
             Assert.IsNotNull(m_firstPublisherConnection, "m_firstPublisherConnection should not be null");
-            
+
             // Read the first writer group
             Assert.IsNotEmpty(m_publisherConfiguration.Connections[0].WriterGroups, "pubSubConfigConnection.WriterGroups should not be empty");
             m_firstWriterGroup = m_publisherConfiguration.Connections[0].WriterGroups[0];
@@ -606,7 +607,7 @@ namespace Opc.Ua.PubSub.Tests.Encoding
                     "DataSetMessages DataSetFlags1 do not match:");
             Assert.AreEqual(uadpDataSetMessageEncode.DataSetFlags2, uadpDataSetMessageDecoded.DataSetFlags2,
                    "DataSetMessages DataSetFlags2 do not match:");
-            
+
             if ((dataSetMessageContentMask & UadpDataSetMessageContentMask.Timestamp) ==
                 UadpDataSetMessageContentMask.Timestamp)
             {

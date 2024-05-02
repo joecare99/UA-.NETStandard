@@ -30,6 +30,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
@@ -464,7 +465,7 @@ namespace Opc.Ua.Server
                         // check if complete chain should be sent.
                         if (Configuration.SecurityConfiguration.SendCertificateChain &&
                             InstanceCertificateChain != null &&
-                            InstanceCertificateChain.Count > 0)
+                            InstanceCertificateChain.Count > 1)
                         {
                             List<byte> serverCertificateChain = new List<byte>();
 
@@ -505,6 +506,7 @@ namespace Opc.Ua.Server
                 }
 
                 Utils.LogInfo("Server - SESSION CREATED. SessionId={0}", sessionId);
+
                 // report audit for successful create session
                 ServerInternal.ReportAuditCreateSessionEvent(context?.AuditEntryId, session, revisedSessionTimeout);
 
@@ -2373,7 +2375,7 @@ namespace Opc.Ua.Server
         {
             System.Net.IPAddress[] targetAddresses = Utils.GetHostAddresses(Utils.GetHostName());
 
-            foreach (string domain in X509Utils.GetDomainsFromCertficate(e.Certificate))
+            foreach (string domain in X509Utils.GetDomainsFromCertificate(e.Certificate))
             {
                 System.Net.IPAddress[] actualAddresses = Utils.GetHostAddresses(domain);
 
@@ -2827,18 +2829,21 @@ namespace Opc.Ua.Server
             }
 
             // set server description.
-            serverDescription = new ApplicationDescription();
-
-            serverDescription.ApplicationUri = configuration.ApplicationUri;
-            serverDescription.ApplicationName = new LocalizedText("en-US", configuration.ApplicationName);
-            serverDescription.ApplicationType = configuration.ApplicationType;
-            serverDescription.ProductUri = configuration.ProductUri;
-            serverDescription.DiscoveryUrls = GetDiscoveryUrls();
+            serverDescription = new ApplicationDescription {
+                ApplicationUri = configuration.ApplicationUri,
+                ApplicationName = new LocalizedText("en-US", configuration.ApplicationName),
+                ApplicationType = configuration.ApplicationType,
+                ProductUri = configuration.ProductUri,
+                DiscoveryUrls = GetDiscoveryUrls()
+            };
 
             endpoints = new EndpointDescriptionCollection();
             IList<EndpointDescription> endpointsForHost = null;
 
-            foreach (var scheme in Utils.DefaultUriSchemes)
+            var baseAddresses = configuration.ServerConfiguration.BaseAddresses;
+            var requiredSchemes = Utils.DefaultUriSchemes.Where(scheme => baseAddresses.Any(a => a.StartsWith(scheme, StringComparison.Ordinal)));
+
+            foreach (var scheme in requiredSchemes)
             {
                 var binding = bindingFactory.GetBinding(scheme);
                 if (binding != null)
@@ -2945,6 +2950,9 @@ namespace Opc.Ua.Server
                     Utils.LogInfo(TraceMasks.StartStop, "Server - CreateSessionManager.");
                     SessionManager sessionManager = CreateSessionManager(m_serverInternal, configuration);
                     sessionManager.Startup();
+
+                    // use event to trigger channel that should not be closed.
+                    sessionManager.SessionChannelKeepAlive += SessionChannelKeepAliveEvent;
 
                     // start the subscription manager.
                     Utils.LogInfo(TraceMasks.StartStop, "Server - CreateSubscriptionManager.");
@@ -3083,6 +3091,7 @@ namespace Opc.Ua.Server
                 {
                     if (m_serverInternal != null)
                     {
+                        m_serverInternal.SessionManager.SessionChannelKeepAlive -= SessionChannelKeepAliveEvent;
                         m_serverInternal.SubscriptionManager.Shutdown();
                         m_serverInternal.SessionManager.Shutdown();
                         m_serverInternal.NodeManager.Shutdown();
@@ -3247,7 +3256,7 @@ namespace Opc.Ua.Server
         /// <returns>Returns the master node manager for the server, the return type is <seealso cref="MasterNodeManager"/>.</returns>
         protected virtual MasterNodeManager CreateMasterNodeManager(IServerInternal server, ApplicationConfiguration configuration)
         {
-            IList<INodeManager> nodeManagers = new List<INodeManager>();
+            var nodeManagers = new List<INodeManager>();
 
             foreach (var nodeManagerFactory in m_nodeManagerFactories)
             {
@@ -3335,6 +3344,24 @@ namespace Opc.Ua.Server
         }
         #endregion
 
+        #region Private Methods
+        /// <summary>
+        /// Reacts to a session channel keep alive event to signal
+        /// a listener channel that a session is still active.
+        /// </summary>
+        private void SessionChannelKeepAliveEvent(Session session, SessionEventReason reason)
+        {
+            Debug.Assert(reason == SessionEventReason.ChannelKeepAlive);
+
+            string secureChannelId = session?.SecureChannelId;
+            if (!string.IsNullOrEmpty(secureChannelId))
+            {
+                var transportListener = TransportListeners.FirstOrDefault(tl => secureChannelId.StartsWith(tl.ListenerId, StringComparison.Ordinal));
+                transportListener?.UpdateChannelLastActiveTime(secureChannelId);
+            }
+        }
+        #endregion
+
         #region Private Properties
         private OperationLimitsState OperationLimits => ServerInternal.ServerObject.ServerCapabilities.OperationLimits;
         #endregion
@@ -3352,7 +3379,7 @@ namespace Opc.Ua.Server
         private int m_lastRegistrationInterval;
         private int m_minNonceLength;
         private bool m_useRegisterServer2;
-        private IList<INodeManagerFactory> m_nodeManagerFactories;
+        private List<INodeManagerFactory> m_nodeManagerFactories;
         #endregion
     }
 }

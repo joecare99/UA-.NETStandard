@@ -21,7 +21,7 @@ using System.Reflection;
 using System.Threading;
 
 namespace Opc.Ua
-{       
+{
     /// <summary> 
     /// The base class for all type nodes.
     /// </summary>
@@ -29,7 +29,7 @@ namespace Opc.Ua
     {
         #region Constructors
         /// <summary>
-        /// Initializes the type with its defalt attribute values.
+        /// Initializes the type with its default attribute values.
         /// </summary>
         protected BaseTypeState(NodeClass nodeClass) : base(nodeClass)
         {
@@ -43,9 +43,7 @@ namespace Opc.Ua
         /// </summary>
         protected override void Initialize(ISystemContext context, NodeState source)
         {
-            BaseTypeState type = source as BaseTypeState;
-
-            if (type != null)
+            if (source is BaseTypeState type)
             {
                 m_superTypeId = type.m_superTypeId;
                 m_isAbstract = type.m_isAbstract;
@@ -55,7 +53,13 @@ namespace Opc.Ua
         }
         #endregion
 
-        #region Public Members
+        #region ICloneable Members
+        /// <inheritdoc/>
+        public override object Clone()
+        {
+            return this.MemberwiseClone();
+        }
+
         /// <summary>
         /// Makes a copy of the node and all children.
         /// </summary>
@@ -65,33 +69,21 @@ namespace Opc.Ua
         public new object MemberwiseClone()
         {
             BaseTypeState clone = new BaseTypeState(this.NodeClass);
-
-            if (m_children != null)
-            {
-                clone.m_children = new List<BaseInstanceState>(m_children.Count);
-
-                for (int ii = 0; ii < m_children.Count; ii++)
-                {
-                    BaseInstanceState child = (BaseInstanceState)m_children[ii].MemberwiseClone();
-                    clone.m_children.Add(child);
-                }
-            }
-
-            clone.m_changeMasks = NodeStateChangeMasks.None;
-
-            return clone;
+            return CloneChildren(clone);
         }
-        
+        #endregion
+
+        #region Public Members
         /// <summary>
         /// The identifier for the supertype node.
         /// </summary>
         public NodeId SuperTypeId
         {
             get
-            { 
-                return m_superTypeId;  
+            {
+                return m_superTypeId;
             }
-            
+
             set
             {
                 if (!Object.ReferenceEquals(m_superTypeId, value))
@@ -109,10 +101,10 @@ namespace Opc.Ua
         public bool IsAbstract
         {
             get
-            { 
-                return m_isAbstract;  
+            {
+                return m_isAbstract;
             }
-            
+
             set
             {
                 if (m_isAbstract != value)
@@ -276,17 +268,17 @@ namespace Opc.Ua
         /// </summary>
         /// <param name="context">The context.</param>
         /// <param name="decoder">The decoder.</param>
-        /// <param name="attibutesToLoad">The attributes to load.</param>
-        public override void Update(ISystemContext context, BinaryDecoder decoder, AttributesToSave attibutesToLoad)
+        /// <param name="attributesToLoad">The attributes to load.</param>
+        public override void Update(ISystemContext context, BinaryDecoder decoder, AttributesToSave attributesToLoad)
         {
-            base.Update(context, decoder, attibutesToLoad);
+            base.Update(context, decoder, attributesToLoad);
 
-            if ((attibutesToLoad & AttributesToSave.SuperTypeId) != 0)
+            if ((attributesToLoad & AttributesToSave.SuperTypeId) != 0)
             {
                 m_superTypeId = decoder.ReadNodeId(null);
             }
 
-            if ((attibutesToLoad & AttributesToSave.IsAbstract) != 0)
+            if ((attributesToLoad & AttributesToSave.IsAbstract) != 0)
             {
                 m_isAbstract = decoder.ReadBoolean(null);
             }
@@ -310,9 +302,11 @@ namespace Opc.Ua
                 {
                     bool isAbstract = m_isAbstract;
 
-                    if (OnReadIsAbstract != null)
+                    NodeAttributeEventHandler<bool> onReadIsAbstract = OnReadIsAbstract;
+
+                    if (onReadIsAbstract != null)
                     {
-                        result = OnReadIsAbstract(context, this, ref isAbstract);
+                        result = onReadIsAbstract(context, this, ref isAbstract);
                     }
 
                     if (ServiceResult.IsGood(result))
@@ -357,9 +351,11 @@ namespace Opc.Ua
 
                     bool isAbstract = isAbstractRef.Value;
 
-                    if (OnWriteIsAbstract != null)
+                    NodeAttributeEventHandler<bool> onWriteIsAbstract = OnWriteIsAbstract;
+
+                    if (onWriteIsAbstract != null)
                     {
-                        result = OnWriteIsAbstract(context, this, ref isAbstract);
+                        result = onWriteIsAbstract(context, this, ref isAbstract);
                     }
 
                     if (ServiceResult.IsGood(result))
@@ -385,20 +381,24 @@ namespace Opc.Ua
         {
             base.PopulateBrowser(context, browser);
 
-            if (!NodeId.IsNull(m_superTypeId))
+            NodeId superTypeId = m_superTypeId;
+
+            if (!NodeId.IsNull(superTypeId))
             {
                 if (browser.IsRequired(ReferenceTypeIds.HasSubtype, true))
                 {
-                    browser.Add(ReferenceTypeIds.HasSubtype, true, m_superTypeId);
+                    browser.Add(ReferenceTypeIds.HasSubtype, true, superTypeId);
                 }
             }
 
+            NodeId nodeId = this.NodeId;
+
             // use the type table to find the subtypes.
-            if (context.TypeTable != null && this.NodeId != null)
+            if (context.TypeTable != null && nodeId != null)
             {
                 if (browser.IsRequired(ReferenceTypeIds.HasSubtype, false))
                 {
-                    IList<NodeId> subtypeIds = context.TypeTable.FindSubTypes(this.NodeId);
+                    IList<NodeId> subtypeIds = context.TypeTable.FindSubTypes(nodeId);
 
                     for (int ii = 0; ii < subtypeIds.Count; ii++)
                     {

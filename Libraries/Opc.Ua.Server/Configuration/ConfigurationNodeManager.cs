@@ -36,67 +36,20 @@ using System.Xml;
 
 namespace Opc.Ua.Server
 {
-    /// <summary>
-    /// Priviledged identity which can access the system configuration.
-    /// </summary>
-    public class SystemConfigurationIdentity : IUserIdentity
-    {
-        private IUserIdentity m_identity;
 
+    /// <summary>
+    /// Privileged identity which can access the system configuration.
+    /// </summary>
+    public class SystemConfigurationIdentity : RoleBasedIdentity
+    {
         /// <summary>
-        /// Create a user identity with the priviledge
+        /// Create a user identity with the privilege
         /// to modify the system configuration.
         /// </summary>
         /// <param name="identity">The user identity.</param>
         public SystemConfigurationIdentity(IUserIdentity identity)
-        {
-            m_identity = identity;
+        :base(identity, new List<Role> {Role.SecurityAdmin, Role.ConfigureAdmin }){
         }
-
-        #region IUserIdentity
-        /// <inheritdoc/>
-        public string DisplayName
-        {
-            get { return m_identity.DisplayName; }
-        }
-
-        /// <inheritdoc/>
-        public string PolicyId
-        {
-            get { return m_identity.PolicyId; }
-        }
-
-        /// <inheritdoc/>
-        public UserTokenType TokenType
-        {
-            get { return m_identity.TokenType; }
-        }
-
-        /// <inheritdoc/>
-        public XmlQualifiedName IssuedTokenType
-        {
-            get { return m_identity.IssuedTokenType; }
-        }
-
-        /// <inheritdoc/>
-        public bool SupportsSignatures
-        {
-            get { return m_identity.SupportsSignatures; }
-        }
-
-        /// <inheritdoc/>
-        public NodeIdCollection GrantedRoleIds
-        {
-            get { return m_identity.GrantedRoleIds; }
-            set { m_identity.GrantedRoleIds = value; }
-        }
-
-        /// <inheritdoc/>
-        public UserIdentityToken GetIdentityToken()
-        {
-            return m_identity.GetIdentityToken();
-        }
-        #endregion
     }
 
     /// <summary>
@@ -120,6 +73,7 @@ namespace Opc.Ua.Server
             m_configuration = configuration;
             // TODO: configure cert groups in configuration
             ServerCertificateGroup defaultApplicationGroup = new ServerCertificateGroup {
+                NodeId = Opc.Ua.ObjectIds.ServerConfiguration_CertificateGroups_DefaultApplicationGroup,
                 BrowseName = Opc.Ua.BrowseNames.DefaultApplicationGroup,
                 CertificateTypes = new NodeId[] { ObjectTypeIds.RsaSha256ApplicationCertificateType },
                 ApplicationCertificate = configuration.SecurityConfiguration.ApplicationCertificate,
@@ -200,7 +154,8 @@ namespace Opc.Ua.Server
 
                         case ObjectTypes.CertificateGroupType:
                         {
-                            var result = m_certificateGroups.FirstOrDefault(group => group.BrowseName == passiveNode.BrowseName);
+                            var result = m_certificateGroups.FirstOrDefault(group => group.NodeId == passiveNode.NodeId);
+
                             if (result != null)
                             {
                                 CertificateGroupState activeNode = new CertificateGroupState(passiveNode.Parent);
@@ -344,19 +299,32 @@ namespace Opc.Ua.Server
         /// <seealso cref="StatusCodes.BadUserAccessDenied"/>
         public void HasApplicationSecureAdminAccess(ISystemContext context)
         {
+            HasApplicationSecureAdminAccess(context, "");
+        }
+
+
+        /// <summary>
+        /// Determine if the impersonated user has admin access.
+        /// </summary>
+        /// <param name="context"></param>
+        /// <param name="_"></param>
+        /// <exception cref="ServiceResultException"/>
+        /// <seealso cref="StatusCodes.BadUserAccessDenied"/>
+        public void HasApplicationSecureAdminAccess(ISystemContext context, string _)
+        {
             OperationContext operationContext = (context as SystemContext)?.OperationContext as OperationContext;
             if (operationContext != null)
             {
                 if (operationContext.ChannelContext?.EndpointDescription?.SecurityMode != MessageSecurityMode.SignAndEncrypt)
                 {
-                    throw new ServiceResultException(StatusCodes.BadUserAccessDenied, "Secure Application Administrator access required.");
+                    throw new ServiceResultException(StatusCodes.BadUserAccessDenied, "Access to this item is only allowed with MessageSecurityMode SignAndEncrypt.");
                 }
-
-                // allow access to system configuration only through special identity
-                SystemConfigurationIdentity user = context.UserIdentity as SystemConfigurationIdentity;
-                if (user == null || user.TokenType == UserTokenType.Anonymous)
+                IUserIdentity identity = operationContext.UserIdentity;
+                // allow access to system configuration only with Role SecurityAdmin
+                if (identity == null || identity.TokenType == UserTokenType.Anonymous ||
+                    !identity.GrantedRoleIds.Contains(ObjectIds.WellKnownRole_SecurityAdmin))
                 {
-                    throw new ServiceResultException(StatusCodes.BadUserAccessDenied, "System Configuration Administrator access required.");
+                    throw new ServiceResultException(StatusCodes.BadUserAccessDenied, "Security Admin Role required to access this item.");
                 }
 
             }
@@ -381,6 +349,7 @@ namespace Opc.Ua.Server
             object[] inputArguments = new object[] { certificateGroupId, certificateTypeId, certificate, issuerCertificates, privateKeyFormat, privateKey };
             X509Certificate2 newCert = null;
 
+            Server.ReportCertificateUpdateRequestedAuditEvent(context, objectId, method, inputArguments);
             try
             {
                 if (certificate == null)
@@ -418,8 +387,12 @@ namespace Opc.Ua.Server
                     throw new ServiceResultException(StatusCodes.BadCertificateInvalid, "Certificate data is invalid.");
                 }
 
-                // validate new subject matches the previous subject
-                if (!X509Utils.CompareDistinguishedName(certificateGroup.ApplicationCertificate.Certificate.SubjectName, newCert.SubjectName))
+                // validate new subject matches the previous subject,
+                // otherwise application may not be able to find it after restart
+                // TODO: An issuer may modify the subject of an issued certificate,
+                // but then the configuration must be updated too!
+                // NOTE: not a strict requirement here for ASN.1 byte compare 
+                if (!X509Utils.CompareDistinguishedName(certificateGroup.ApplicationCertificate.Certificate.Subject, newCert.Subject))
                 {
                     throw new ServiceResultException(StatusCodes.BadSecurityChecksFailed, "Subject Name of new certificate doesn't match the application.");
                 }
@@ -463,12 +436,13 @@ namespace Opc.Ua.Server
                         case "":
                         {
                             X509Certificate2 certWithPrivateKey = certificateGroup.ApplicationCertificate.LoadPrivateKeyEx(passwordProvider).Result;
-                            updateCertificate.CertificateWithPrivateKey = CertificateFactory.CreateCertificateWithPrivateKey(newCert, certWithPrivateKey);
+                            var exportableKey = X509Utils.CreateCopyWithPrivateKey(certWithPrivateKey, false);
+                            updateCertificate.CertificateWithPrivateKey = CertificateFactory.CreateCertificateWithPrivateKey(newCert, exportableKey);
                             break;
                         }
                         case "PFX":
                         {
-                            X509Certificate2 certWithPrivateKey = X509Utils.CreateCertificateFromPKCS12(privateKey, passwordProvider?.GetPassword(certificateGroup.ApplicationCertificate));
+                            X509Certificate2 certWithPrivateKey = X509Utils.CreateCertificateFromPKCS12(privateKey, passwordProvider?.GetPassword(certificateGroup.ApplicationCertificate), true);
                             updateCertificate.CertificateWithPrivateKey = CertificateFactory.CreateCertificateWithPrivateKey(newCert, certWithPrivateKey);
                             break;
                         }
@@ -568,7 +542,7 @@ namespace Opc.Ua.Server
             var passwordProvider = m_configuration.SecurityConfiguration.CertificatePasswordProvider;
             X509Certificate2 certWithPrivateKey = certificateGroup.ApplicationCertificate.LoadPrivateKeyEx(passwordProvider).Result;
             Utils.LogCertificate(Utils.TraceMasks.Security, "Create signing request: ", certWithPrivateKey);
-            certificateRequest = CertificateFactory.CreateSigningRequest(certWithPrivateKey, X509Utils.GetDomainsFromCertficate(certWithPrivateKey));
+            certificateRequest = CertificateFactory.CreateSigningRequest(certWithPrivateKey, X509Utils.GetDomainsFromCertificate(certWithPrivateKey));
             return ServiceResult.Good;
         }
 

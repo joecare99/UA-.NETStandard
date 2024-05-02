@@ -59,7 +59,7 @@ namespace Opc.Ua
     /// </para>
     /// </example>
     [DataContract(Namespace = Namespaces.OpcUaXsd)]
-    public partial class LocalizedText : IFormattable
+    public partial class LocalizedText : ICloneable, IFormattable
     {
         #region Constructors
         /// <summary>
@@ -116,7 +116,7 @@ namespace Opc.Ua
 
             try
             {
-                m_text = String.Format(culture, m_translationInfo.Text, m_translationInfo.Args);
+                m_text = string.Format(culture, m_translationInfo.Text, m_translationInfo.Args);
             }
             catch
             {
@@ -335,12 +335,18 @@ namespace Opc.Ua
         /// </remarks>
         public override int GetHashCode()
         {
+            var hash = new HashCode();
             if (m_text != null)
             {
-                return m_text.GetHashCode();
+                hash.Add(m_text);
             }
 
-            return 0;
+            if (m_locale != null)
+            {
+                hash.Add(m_locale);
+            }
+
+            return hash.ToHashCode();
         }
 
         /// <summary>
@@ -369,7 +375,7 @@ namespace Opc.Ua
         {
             if (format == null)
             {
-                return String.Format(formatProvider, "{0}", this.m_text);
+                return string.Format(formatProvider, "{0}", this.m_text);
             }
 
             throw new FormatException(Utils.Format("Invalid format string: '{0}'.", format));
@@ -377,6 +383,12 @@ namespace Opc.Ua
         #endregion
 
         #region ICloneable Members
+        /// <inheritdoc/>
+        public virtual object Clone()
+        {
+            return this.MemberwiseClone();
+        }
+
         /// <summary>
         /// Makes a deep copy of the object.
         /// </summary>
@@ -451,7 +463,7 @@ namespace Opc.Ua
     /// A strongly-typed collection of LocalizedText objects.
     /// </remarks>
     [CollectionDataContract(Name = "ListOfLocalizedText", Namespace = Namespaces.OpcUaXsd, ItemName = "LocalizedText")]
-    public partial class LocalizedTextCollection : List<LocalizedText>
+    public partial class LocalizedTextCollection : List<LocalizedText>, ICloneable
     {
         /// <summary>
         /// Initializes an empty collection.
@@ -506,6 +518,14 @@ namespace Opc.Ua
         public static implicit operator LocalizedTextCollection(LocalizedText[] values)
         {
             return ToLocalizedTextCollection(values);
+        }
+        #endregion
+
+        #region ICloneable
+        /// <inheritdoc/>
+        public virtual object Clone()
+        {
+            return this.MemberwiseClone();
         }
 
         /// <summary>

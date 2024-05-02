@@ -105,7 +105,7 @@ namespace Opc.Ua.Bindings
                             // check if complete chain should be sent.
                             if (configuration.SecurityConfiguration.SendCertificateChain &&
                                 instanceCertificateChain != null &&
-                                instanceCertificateChain.Count > 0)
+                                instanceCertificateChain.Count > 1)
                             {
                                 List<byte> serverCertificateChain = new List<byte>();
 
@@ -128,7 +128,7 @@ namespace Opc.Ua.Bindings
                 }
                 else
                 {
-                    Utils.LogError("Failed to create endpoint {0} because the transport profile is unsupported.", uri);
+                    Utils.LogError("Failed to create endpoint {0} because the transport profile is unsupported.", Redaction.Redact.Create(uri));
                 }
             }
 

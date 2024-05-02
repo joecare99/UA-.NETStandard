@@ -22,7 +22,7 @@ namespace Opc.Ua
     {
         #region Constructors
         /// <summary>
-        /// Initializes the instance with its defalt attribute values.
+        /// Initializes the instance with its default attribute values.
         /// </summary>
         public DataTypeState() : base(NodeClass.DataType)
         {
@@ -38,6 +38,27 @@ namespace Opc.Ua
             return new DataTypeState();
         }
         #endregion
+
+        #region ICloneable Members
+        /// <inheritdoc/>
+        public override object Clone()
+        {
+            return this.MemberwiseClone();
+        }
+
+        /// <summary>
+        /// Makes a copy of the node and all children.
+        /// </summary>
+        /// <returns>
+        /// A new object that is a copy of this instance.
+        /// </returns>
+        public new object MemberwiseClone()
+        {
+            DataTypeState clone = (DataTypeState)Activator.CreateInstance(this.GetType());
+            return CloneChildren(clone);
+        }
+        #endregion
+
 
         /// <summary>
         /// The abstract definition of the data type.
@@ -183,9 +204,11 @@ namespace Opc.Ua
                 {
                     ExtensionObject dataTypeDefinition = m_dataTypeDefinition;
 
-                    if (OnReadDataTypeDefinition != null)
+                    NodeAttributeEventHandler<ExtensionObject> onReadDataTypeDefinition = OnReadDataTypeDefinition;
+
+                    if (onReadDataTypeDefinition != null)
                     {
-                        result = OnReadDataTypeDefinition(context, this, ref dataTypeDefinition);
+                        result = onReadDataTypeDefinition(context, this, ref dataTypeDefinition);
                     }
 
                     if (ServiceResult.IsGood(result))
@@ -198,6 +221,11 @@ namespace Opc.Ua
                             structureType.SetDefaultEncodingId(context, NodeId, null);
                         }
                         value = dataTypeDefinition;
+                    }
+
+                    if (value == null && result == null)
+                    {
+                        return StatusCodes.BadAttributeIdInvalid;
                     }
 
                     return result;
@@ -230,9 +258,11 @@ namespace Opc.Ua
                         return StatusCodes.BadNotWritable;
                     }
 
-                    if (OnWriteDataTypeDefinition != null)
+                    NodeAttributeEventHandler<ExtensionObject> onWriteDataTypeDefinition = OnWriteDataTypeDefinition;
+
+                    if (onWriteDataTypeDefinition != null)
                     {
-                        result = OnWriteDataTypeDefinition(context, this, ref dataTypeDefinition);
+                        result = onWriteDataTypeDefinition(context, this, ref dataTypeDefinition);
                     }
 
                     if (ServiceResult.IsGood(result))

@@ -31,6 +31,8 @@ using System;
 using System.IO;
 using System.Text;
 using NUnit.Framework;
+using Assert = NUnit.Framework.Legacy.ClassicAssert;
+
 
 namespace Opc.Ua.Core.Tests.Types.Encoders
 {
@@ -60,7 +62,7 @@ namespace Opc.Ua.Core.Tests.Types.Encoders
             )
         {
             object defaultValue = TypeInfo.GetDefaultValue(builtInType);
-            EncodeDecodeDataValue(encoderType, builtInType, defaultValue);
+            EncodeDecodeDataValue(encoderType, builtInType, MemoryStreamType.MemoryStream, defaultValue);
         }
 
         /// <summary>
@@ -76,7 +78,7 @@ namespace Opc.Ua.Core.Tests.Types.Encoders
         {
             Assume.That(builtInType != BuiltInType.DiagnosticInfo);
             object randomData = DataGenerator.GetRandom(builtInType);
-            EncodeDecodeDataValue(encoderType, builtInType, randomData);
+            EncodeDecodeDataValue(encoderType, builtInType, MemoryStreamType.ArraySegmentStream, randomData);
         }
 
         /// <summary>
@@ -120,7 +122,7 @@ namespace Opc.Ua.Core.Tests.Types.Encoders
                         break;
                 }
             };
-            EncodeDecode(encoderType, builtInType, randomData);
+            EncodeDecode(encoderType, builtInType, MemoryStreamType.ArraySegmentStream, randomData);
         }
 
         /// <summary>
@@ -140,7 +142,7 @@ namespace Opc.Ua.Core.Tests.Types.Encoders
                 // or encoding of extension objects fails.
                 randomData = ExtensionObject.Null;
             }
-            EncodeDecode(encoderType, builtInType, randomData);
+            EncodeDecode(encoderType, builtInType, MemoryStreamType.RecyclableMemoryStream, randomData);
         }
 
         /// <summary>
@@ -156,7 +158,7 @@ namespace Opc.Ua.Core.Tests.Types.Encoders
             Array boundaryValues = DataGenerator.GetRandomArray(builtInType, true, 10, true);
             foreach (var boundaryValue in boundaryValues)
             {
-                EncodeDecode(encoderType, builtInType, boundaryValue);
+                EncodeDecode(encoderType, builtInType, MemoryStreamType.MemoryStream, boundaryValue);
             }
         }
 
@@ -176,7 +178,7 @@ namespace Opc.Ua.Core.Tests.Types.Encoders
             // ensure different sized arrays contain different data set
             SetRandomSeed(arrayLength);
             object randomData = DataGenerator.GetRandomArray(builtInType, useBoundaryValues, arrayLength, true);
-            EncodeDecodeDataValue(encoderType, builtInType, randomData);
+            EncodeDecodeDataValue(encoderType, builtInType, MemoryStreamType.ArraySegmentStream, randomData);
         }
 
         /// <summary>
@@ -191,7 +193,7 @@ namespace Opc.Ua.Core.Tests.Types.Encoders
             )
         {
             object randomData = DataGenerator.GetRandomArray(builtInType, false, 0, true);
-            EncodeDecodeDataValue(encoderType, builtInType, randomData);
+            EncodeDecodeDataValue(encoderType, builtInType, MemoryStreamType.RecyclableMemoryStream, randomData);
         }
 
         /// <summary>
@@ -206,7 +208,7 @@ namespace Opc.Ua.Core.Tests.Types.Encoders
         {
             SetRepeatedRandomSeed();
             object randomData = DataGenerator.GetRandom(BuiltInType.Variant);
-            EncodeDecodeDataValue(encoderType, BuiltInType.Variant, randomData);
+            EncodeDecodeDataValue(encoderType, BuiltInType.Variant, MemoryStreamType.MemoryStream, randomData);
         }
 
         /// <summary>
@@ -224,11 +226,11 @@ namespace Opc.Ua.Core.Tests.Types.Encoders
             {
                 Assert.Throws(
                     typeof(ServiceResultException),
-                    () => EncodeDataValue(EncodingType.Json, builtInType, randomData, false)
+                    () => EncodeDataValue(EncodingType.Json, builtInType, MemoryStreamType.ArraySegmentStream, randomData, false)
                 );
                 return;
             }
-            string json = EncodeDataValue(EncodingType.Json, builtInType, randomData, false);
+            string json = EncodeDataValue(EncodingType.Json, builtInType, MemoryStreamType.MemoryStream, randomData, false);
             PrettifyAndValidateJson(json);
         }
 
@@ -246,7 +248,7 @@ namespace Opc.Ua.Core.Tests.Types.Encoders
         {
             SetRandomSeed(arrayLength);
             object randomData = DataGenerator.GetRandomArray(builtInType, useBoundaryValues, arrayLength, true);
-            string json = EncodeDataValue(EncodingType.Json, builtInType, randomData, false);
+            string json = EncodeDataValue(EncodingType.Json, builtInType, MemoryStreamType.RecyclableMemoryStream, randomData, false);
             PrettifyAndValidateJson(json);
         }
 
@@ -261,7 +263,7 @@ namespace Opc.Ua.Core.Tests.Types.Encoders
             )
         {
             object randomData = DataGenerator.GetRandomArray(builtInType, false, 0, true);
-            string json = EncodeDataValue(EncodingType.Json, builtInType, randomData, false);
+            string json = EncodeDataValue(EncodingType.Json, builtInType, MemoryStreamType.MemoryStream, randomData, false);
             PrettifyAndValidateJson(json);
         }
 
@@ -284,7 +286,7 @@ namespace Opc.Ua.Core.Tests.Types.Encoders
                 //new Variant(new TestEnumType[] { TestEnumType.One, TestEnumType.Two, TestEnumType.Hundred }),
                 new Variant(new Int32[] { 2, 3, 10 }, new TypeInfo(BuiltInType.Enumeration, 1))
             };
-            EncodeDecodeDataValue(encoderType, BuiltInType.Variant, variant);
+            EncodeDecodeDataValue(encoderType, BuiltInType.Variant, MemoryStreamType.ArraySegmentStream, variant);
         }
 
         /// <summary>
@@ -302,7 +304,7 @@ namespace Opc.Ua.Core.Tests.Types.Encoders
             int arrayDimension = RandomSource.NextInt32(99) + 1;
             Array randomData = DataGenerator.GetRandomArray(builtInType, false, arrayDimension, true);
             var variant = new Variant(randomData, new TypeInfo(builtInType, 1));
-            EncodeDecodeDataValue(encoderType, BuiltInType.Variant, variant);
+            EncodeDecodeDataValue(encoderType, BuiltInType.Variant, MemoryStreamType.RecyclableMemoryStream, variant);
         }
 
         /// <summary>
@@ -325,22 +327,30 @@ namespace Opc.Ua.Core.Tests.Types.Encoders
             TestContext.Out.WriteLine(encodeInfo);
             TestContext.Out.WriteLine("Expected:");
             TestContext.Out.WriteLine(randomData);
-            var encoderStream = new MemoryStream();
-            IEncoder encoder = CreateEncoder(encoderType, Context, encoderStream, type, true, false);
-            encoder.WriteArray(builtInType.ToString(), randomData, ValueRanks.OneDimension, builtInType);
-            Dispose(encoder);
 
-            var buffer = encoderStream.ToArray();
+            byte[] buffer;
+            using (var encoderStream = CreateEncoderMemoryStream(MemoryStreamType.MemoryStream))
+            {
+                using (IEncoder encoder = CreateEncoder(encoderType, Context, encoderStream, type, true, false))
+                {
+                    encoder.WriteArray(builtInType.ToString(), randomData, ValueRanks.OneDimension, builtInType);
+                }
+                buffer = encoderStream.ToArray();
+            }
+
             switch (encoderType)
             {
                 case EncodingType.Json:
                     PrettifyAndValidateJson(Encoding.UTF8.GetString(buffer));
                     break;
             }
-            var decoderStream = new MemoryStream(buffer);
-            IDecoder decoder = CreateDecoder(encoderType, Context, decoderStream, type);
-            object result = decoder.ReadArray(builtInType.ToString(), ValueRanks.OneDimension, builtInType);
-            Dispose(decoder);
+
+            object result;
+            using (var decoderStream = new MemoryStream(buffer))
+            using (IDecoder decoder = CreateDecoder(encoderType, Context, decoderStream, type))
+            {
+                result = decoder.ReadArray(builtInType.ToString(), ValueRanks.OneDimension, builtInType);
+            }
 
             TestContext.Out.WriteLine("Result:");
             TestContext.Out.WriteLine(result);
@@ -375,7 +385,7 @@ namespace Opc.Ua.Core.Tests.Types.Encoders
             int elements = ElementsFromDimension(dimensions);
             Array randomData = DataGenerator.GetRandomArray(builtInType, false, elements, true);
             var variant = new Variant(new Matrix(randomData, builtInType, dimensions));
-            EncodeDecodeDataValue(encoderType, BuiltInType.Variant, variant);
+            EncodeDecodeDataValue(encoderType, BuiltInType.Variant, MemoryStreamType.RecyclableMemoryStream, variant);
         }
 
         /// <summary>
@@ -395,10 +405,8 @@ namespace Opc.Ua.Core.Tests.Types.Encoders
             int elements = ElementsFromDimension(dimensions);
             Array randomData = DataGenerator.GetRandomArray(builtInType, false, elements, true);
             var variant = new Variant(new Matrix(randomData, builtInType, dimensions));
-            string json = EncodeDataValue(EncodingType.Json, BuiltInType.Variant, variant, false);
-            var result = PrettifyAndValidateJson(json);
-            TestContext.Out.WriteLine("Result:");
-            TestContext.Out.WriteLine(result);
+            string json = EncodeDataValue(EncodingType.Json, BuiltInType.Variant, MemoryStreamType.ArraySegmentStream, variant, false);
+            _ = PrettifyAndValidateJson(json);
         }
 
         /// <summary>
@@ -424,22 +432,30 @@ namespace Opc.Ua.Core.Tests.Types.Encoders
             TestContext.Out.WriteLine(encodeInfo);
             TestContext.Out.WriteLine("Expected:");
             TestContext.Out.WriteLine(matrix);
-            var encoderStream = new MemoryStream();
-            IEncoder encoder = CreateEncoder(encoderType, Context, encoderStream, type);
-            encoder.WriteArray(builtInType.ToString(), matrix, matrix.TypeInfo.ValueRank, builtInType);
-            Dispose(encoder);
 
-            var buffer = encoderStream.ToArray();
+            byte[] buffer;
+            using (var encoderStream = CreateEncoderMemoryStream(MemoryStreamType.MemoryStream))
+            {
+                using (IEncoder encoder = CreateEncoder(encoderType, Context, encoderStream, type))
+                {
+                    encoder.WriteArray(builtInType.ToString(), matrix, matrix.TypeInfo.ValueRank, builtInType);
+                }
+                buffer = encoderStream.ToArray();
+            }
+
             switch (encoderType)
             {
                 case EncodingType.Json:
                     PrettifyAndValidateJson(Encoding.UTF8.GetString(buffer));
                     break;
             }
-            var decoderStream = new MemoryStream(buffer);
-            IDecoder decoder = CreateDecoder(encoderType, Context, decoderStream, type);
-            object result = decoder.ReadArray(builtInType.ToString(), matrix.TypeInfo.ValueRank, builtInType);
-            Dispose(decoder);
+
+            object result;
+            using (var decoderStream = new MemoryStream(buffer))
+            using (IDecoder decoder = CreateDecoder(encoderType, Context, decoderStream, type))
+            {
+                result = decoder.ReadArray(builtInType.ToString(), matrix.TypeInfo.ValueRank, builtInType);
+            }
 
             TestContext.Out.WriteLine("Result:");
             TestContext.Out.WriteLine(result);
@@ -448,7 +464,6 @@ namespace Opc.Ua.Core.Tests.Types.Encoders
             Assert.AreEqual(expected, result, encodeInfo);
             Assert.IsTrue(Utils.IsEqual(expected, result), "Opc.Ua.Utils.IsEqual failed to compare expected and result. " + encodeInfo);
         }
-
 
         /// <summary>
         /// Verify that decoding of a Matrix DataValue which has invalid array dimensions.
@@ -489,11 +504,17 @@ namespace Opc.Ua.Core.Tests.Types.Encoders
             Assert.IsNotNull(expected, "Expected DataValue is Null, " + encodeInfo);
             TestContext.Out.WriteLine("Expected:");
             TestContext.Out.WriteLine(expected);
-            var encoderStream = new MemoryStream();
-            IEncoder encoder = CreateEncoder(encoderType, Context, encoderStream, typeof(DataValue));
-            encoder.WriteDataValue("DataValue", expected);
-            Dispose(encoder);
-            var buffer = encoderStream.ToArray();
+
+            byte[] buffer;
+            using (var encoderStream = CreateEncoderMemoryStream(MemoryStreamType.MemoryStream))
+            {
+                using (IEncoder encoder = CreateEncoder(encoderType, Context, encoderStream, typeof(DataValue)))
+                {
+                    encoder.WriteDataValue("DataValue", expected);
+                }
+                buffer = encoderStream.ToArray();
+            }
+
             string jsonFormatted;
             switch (encoderType)
             {
@@ -501,42 +522,134 @@ namespace Opc.Ua.Core.Tests.Types.Encoders
                     jsonFormatted = PrettifyAndValidateJson(Encoding.UTF8.GetString(buffer));
                     break;
             }
-            var decoderStream = new MemoryStream(buffer);
-            IDecoder decoder = CreateDecoder(encoderType, Context, decoderStream, typeof(DataValue));
 
+            using (var decoderStream = new MemoryStream(buffer))
+            using (IDecoder decoder = CreateDecoder(encoderType, Context, decoderStream, typeof(DataValue)))
+            {
+                switch (encoderType)
+                {
+                    case EncodingType.Json:
+                    {
+                        // check such matrix cannot be initialized when decoding from Json format
+                        // the exception is thrown while trying to construct the Matrix 
+                        Assert.Throws(
+                            typeof(ArgumentException),
+                            () => {
+                                decoder.ReadDataValue("DataValue");
+                            });
+                        break;
+                    }
+                    case EncodingType.Xml:
+                    {
+                        // check such matrix cannot be initialized when decoding from Xml format
+                        // the exception is thrown while trying to construct the Matrix but is caught and handled
+                        decoder.ReadDataValue("DataValue");
+                        break;
+                    }
+                    case EncodingType.Binary:
+                    {
+                        // check such matrix cannot be initialized when decoding from Binary format
+                        // the exception is thrown before trying to construct the Matrix
+                        Assert.Throws(
+                            typeof(ServiceResultException),
+                            () => {
+                                decoder.ReadDataValue("DataValue");
+                            });
+                        break;
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Verify that decoding of a Matrix DataValue which has statical provided invalid array dimensions.
+        /// </summary
+        [Theory]
+        [Category("Matrix")]
+        public void MatrixOverflowStaticDimensions(
+            EncodingType encoderType,
+            BuiltInType builtInType
+            )
+        {
+            Assume.That(builtInType != BuiltInType.Null);
+            int matrixDimension = 5;
+            int[] dimensions = new int[matrixDimension];
+            SetMatrixDimensions(dimensions);
+            int elements = ElementsFromDimension(dimensions);
+            Array randomData = DataGenerator.GetRandomArray(builtInType, false, elements, true);
+
+            var matrix = new Matrix(randomData, builtInType, dimensions);
+            matrix.Dimensions[0] = 12301;
+            matrix.Dimensions[1] = 13193;
+            matrix.Dimensions[2] = 13418;
+            matrix.Dimensions[3] = 14087;
+            matrix.Dimensions[4] = 20446;
+
+
+            var variant = new Variant(matrix);
+
+            string encodeInfo = $"Encoder: {encoderType} Type:{builtInType}";
+            TestContext.Out.WriteLine(encodeInfo);
+            TestContext.Out.WriteLine(variant);
+            DataValue expected = CreateDataValue(builtInType, variant);
+            Assert.IsNotNull(expected, "Expected DataValue is Null, " + encodeInfo);
+            TestContext.Out.WriteLine("Expected:");
+            TestContext.Out.WriteLine(expected);
+
+            byte[] buffer;
+            using (var encoderStream = CreateEncoderMemoryStream(MemoryStreamType.ArraySegmentStream))
+            {
+                using (IEncoder encoder = CreateEncoder(encoderType, Context, encoderStream, typeof(DataValue)))
+                {
+                    encoder.WriteDataValue("DataValue", expected);
+                }
+                buffer = encoderStream.ToArray();
+            }
+
+            string jsonFormatted;
             switch (encoderType)
             {
                 case EncodingType.Json:
-                {
-                    // check such matrix cannot be initialized when decoding from Json format
-                    // the exception is thrown while trying to construct the Matrix 
-                    Assert.Throws(
-                        typeof(ArgumentException),
-                        () => {
-                            decoder.ReadDataValue("DataValue");
-                        });
+                    jsonFormatted = PrettifyAndValidateJson(Encoding.UTF8.GetString(buffer));
                     break;
-                }
-                case EncodingType.Xml:
+            }
+
+            using (var decoderStream = new MemoryStream(buffer))
+            using (IDecoder decoder = CreateDecoder(encoderType, Context, decoderStream, typeof(DataValue)))
+            {
+                switch (encoderType)
                 {
-                    // check such matrix cannot be initialized when decoding from Xml format
-                    // the exception is thrown while trying to construct the Matrix but is caught and handled
-                    decoder.ReadDataValue("DataValue");
-                    break;
-                }
-                case EncodingType.Binary:
-                {
-                    // check such matrix cannot be initialized when decoding from Binary format
-                    // the exception is thrown before trying to construct the Matrix
-                    Assert.Throws(
-                        typeof(ServiceResultException),
-                        () => {
-                            decoder.ReadDataValue("DataValue");
-                        });
-                    break;
+                    case EncodingType.Json:
+                    {
+                        // check such matrix cannot be initialized when decoding from Json format
+                        // the exception is thrown while trying to construct the Matrix 
+                        Assert.Throws(
+                            typeof(ArgumentException),
+                            () => {
+                                decoder.ReadDataValue("DataValue");
+                            });
+                        break;
+                    }
+                    case EncodingType.Xml:
+                    {
+                        // check such matrix cannot be initialized when decoding from Xml format
+                        // the exception is thrown while trying to construct the Matrix but is caught and handled
+                        decoder.ReadDataValue("DataValue");
+                        break;
+                    }
+                    case EncodingType.Binary:
+                    {
+                        // check such matrix cannot be initialized when decoding from Binary format
+                        // the exception is thrown before trying to construct the Matrix
+                        Assert.Throws(
+                            typeof(ServiceResultException),
+                            () => {
+                                decoder.ReadDataValue("DataValue");
+                            });
+                        break;
+                    }
                 }
             }
-            Dispose(decoder);
         }
 
         /// <summary>
@@ -545,8 +658,8 @@ namespace Opc.Ua.Core.Tests.Types.Encoders
         [Theory]
         [Category("Matrix")]
         public void EncodeMatrixInArrayOverflow(
-        EncodingType encoderType,
-        BuiltInType builtInType
+            EncodingType encoderType,
+            BuiltInType builtInType
             )
         {
             Assume.That(builtInType != BuiltInType.Null);
@@ -574,76 +687,80 @@ namespace Opc.Ua.Core.Tests.Types.Encoders
             TestContext.Out.WriteLine(encodeInfo);
             TestContext.Out.WriteLine("Expected:");
             TestContext.Out.WriteLine(matrix);
-            var encoderStream = new MemoryStream();
-            IEncoder encoder = CreateEncoder(encoderType, Context, encoderStream, type);
-            switch (encoderType)
-            {
-                case EncodingType.Json:
-                {
-                    // check such matrix cannot be initialized when encoded into Json format
-                    // the exception is thrown while trying to WriteStructureMatrix into the arrray 
-                    Assert.Throws(
-                        typeof(ServiceResultException),
-                        () => {
-                            encoder.WriteArray(builtInType.ToString(), matrix, matrix.TypeInfo.ValueRank, builtInType);
-                        });
-                    Dispose(encoder);
-                    return;
 
+            byte[] buffer;
+            using (var encoderStream = CreateEncoderMemoryStream(MemoryStreamType.RecyclableMemoryStream))
+            {
+                using (IEncoder encoder = CreateEncoder(encoderType, Context, encoderStream, type))
+                {
+                    switch (encoderType)
+                    {
+                        case EncodingType.Json:
+                        {
+                            // check such matrix cannot be initialized when encoded into Json format
+                            // the exception is thrown while trying to WriteStructureMatrix into the arrray 
+                            Assert.Throws(
+                                typeof(ServiceResultException),
+                                () => {
+                                    encoder.WriteArray(builtInType.ToString(), matrix, matrix.TypeInfo.ValueRank, builtInType);
+                                });
+                            return;
+
+                        }
+                    }
+                    encoder.WriteArray(builtInType.ToString(), matrix, matrix.TypeInfo.ValueRank, builtInType);
                 }
+                buffer = encoderStream.ToArray();
             }
 
-            encoder.WriteArray(builtInType.ToString(), matrix, matrix.TypeInfo.ValueRank, builtInType);
-            Dispose(encoder);
-
-            var buffer = encoderStream.ToArray();
             switch (encoderType)
             {
                 case EncodingType.Json:
                     PrettifyAndValidateJson(Encoding.UTF8.GetString(buffer));
                     break;
             }
-            var decoderStream = new MemoryStream(buffer);
-            IDecoder decoder = CreateDecoder(encoderType, Context, decoderStream, type);
 
-            switch (encoderType)
+            using (var decoderStream = new MemoryStream(buffer))
+            using (IDecoder decoder = CreateDecoder(encoderType, Context, decoderStream, type))
             {
-                case EncodingType.Json:
+                switch (encoderType)
                 {
-                    // If this would execute:
-                    // check such matrix cannot be initialized when decoding from Json format
-                    // the exception is thrown while trying to construct the Matrix 
-                    Assert.Throws(
-                        typeof(ServiceResultException),
-                        () => {
-                            decoder.ReadArray(builtInType.ToString(), matrix.TypeInfo.ValueRank, builtInType);
-                        });
-                    break;
-                }
-                case EncodingType.Xml:
-                {
-                    // check such matrix cannot be initialized when decoding from Xml format
-                    // the exception is thrown while trying to construct the Matrix but is caught and handled
-                    Assert.Throws(
-                        typeof(ArgumentException),
-                        () => {
-                            decoder.ReadArray(builtInType.ToString(), matrix.TypeInfo.ValueRank, builtInType);
-                        });
-                    break;
-                }
-                case EncodingType.Binary:
-                {
-                    // check such matrix cannot be initialized when decoding from Binary format
-                    // the exception is thrown before trying to construct the Matrix
-                    Assert.Throws(
-                        typeof(ServiceResultException),
-                        () => {
-                            decoder.ReadArray(builtInType.ToString(), matrix.TypeInfo.ValueRank, builtInType);
-                        });
-                    break;
+                    case EncodingType.Json:
+                    {
+                        // If this would execute:
+                        // check such matrix cannot be initialized when decoding from Json format
+                        // the exception is thrown while trying to construct the Matrix 
+                        Assert.Throws(
+                            typeof(ServiceResultException),
+                            () => {
+                                decoder.ReadArray(builtInType.ToString(), matrix.TypeInfo.ValueRank, builtInType);
+                            });
+                        break;
+                    }
+                    case EncodingType.Xml:
+                    {
+                        // check such matrix cannot be initialized when decoding from Xml format
+                        // the exception is thrown while trying to construct the Matrix but is caught and handled
+                        Assert.Throws(
+                            typeof(ArgumentException),
+                            () => {
+                                decoder.ReadArray(builtInType.ToString(), matrix.TypeInfo.ValueRank, builtInType);
+                            });
+                        break;
+                    }
+                    case EncodingType.Binary:
+                    {
+                        // check such matrix cannot be initialized when decoding from Binary format
+                        // the exception is thrown before trying to construct the Matrix
+                        Assert.Throws(
+                            typeof(ServiceResultException),
+                            () => {
+                                decoder.ReadArray(builtInType.ToString(), matrix.TypeInfo.ValueRank, builtInType);
+                            });
+                        break;
+                    }
                 }
             }
-            Dispose(decoder);
         }
         #endregion
 

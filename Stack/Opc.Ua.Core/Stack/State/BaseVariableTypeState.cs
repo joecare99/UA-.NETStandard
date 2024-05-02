@@ -23,7 +23,7 @@ namespace Opc.Ua
     {
         #region Constructors
         /// <summary>
-        /// Initializes the instance with its defalt attribute values.
+        /// Initializes the instance with its default attribute values.
         /// </summary>
         protected BaseVariableTypeState() : base(NodeClass.VariableType)
         {
@@ -36,9 +36,7 @@ namespace Opc.Ua
         /// </summary>
         protected override void Initialize(ISystemContext context, NodeState source)
         {
-            BaseVariableTypeState type = source as BaseVariableTypeState;
-
-            if (type != null)
+            if (source is BaseVariableTypeState type)
             {
                 m_value = Utils.Clone(type.m_value);
                 m_dataType = type.m_dataType;
@@ -62,6 +60,26 @@ namespace Opc.Ua
         protected virtual object ExtractValueFromVariant(ISystemContext context, object value, bool throwOnError)
         {
             return value;
+        }
+        #endregion
+
+        #region ICloneable Members
+        /// <inheritdoc/>
+        public override object Clone()
+        {
+            return this.MemberwiseClone();
+        }
+
+        /// <summary>
+        /// Makes a copy of the node and all children.
+        /// </summary>
+        /// <returns>
+        /// A new object that is a copy of this instance.
+        /// </returns>
+        public new object MemberwiseClone()
+        {
+            BaseTypeState clone = (BaseTypeState)Activator.CreateInstance(this.GetType());
+            return CloneChildren(clone);
         }
         #endregion
 
@@ -92,11 +110,11 @@ namespace Opc.Ua
         /// </summary>
         public Variant WrappedValue
         {
-            get 
-            { 
-                return new Variant(m_value); 
+            get
+            {
+                return new Variant(m_value);
             }
-            
+
             set
             {
                 Value = ExtractValueFromVariant(null, value.Value, false);
@@ -219,9 +237,8 @@ namespace Opc.Ua
         {
             base.Export(context, node);
 
-            VariableTypeNode variableTypeNode = node as VariableTypeNode;
 
-            if (variableTypeNode != null)
+            if (node is VariableTypeNode variableTypeNode)
             {
                 variableTypeNode.Value = new Variant(Utils.Clone(this.Value));
                 variableTypeNode.DataType = this.DataType;
@@ -371,27 +388,27 @@ namespace Opc.Ua
         /// </summary>
         /// <param name="context">The context.</param>
         /// <param name="decoder">The decoder.</param>
-        /// <param name="attibutesToLoad">The attributes to load.</param>
-        public override void Update(ISystemContext context, BinaryDecoder decoder, AttributesToSave attibutesToLoad)
+        /// <param name="attributesToLoad">The attributes to load.</param>
+        public override void Update(ISystemContext context, BinaryDecoder decoder, AttributesToSave attributesToLoad)
         {
-            base.Update(context, decoder, attibutesToLoad);
+            base.Update(context, decoder, attributesToLoad);
 
-            if ((attibutesToLoad & AttributesToSave.Value) != 0)
+            if ((attributesToLoad & AttributesToSave.Value) != 0)
             {
                 WrappedValue = decoder.ReadVariant(null);
             }
 
-            if ((attibutesToLoad & AttributesToSave.DataType) != 0)
+            if ((attributesToLoad & AttributesToSave.DataType) != 0)
             {
                 m_dataType = decoder.ReadNodeId(null);
             }
 
-            if ((attibutesToLoad & AttributesToSave.ValueRank) != 0)
+            if ((attributesToLoad & AttributesToSave.ValueRank) != 0)
             {
                 m_valueRank = decoder.ReadInt32(null);
             }
 
-            if ((attibutesToLoad & AttributesToSave.ArrayDimensions) != 0)
+            if ((attributesToLoad & AttributesToSave.ArrayDimensions) != 0)
             {
                 UInt32Collection arrayDimensions = decoder.ReadUInt32Array(null);
 
@@ -424,9 +441,11 @@ namespace Opc.Ua
                 {
                     NodeId dataType = m_dataType;
 
-                    if (OnReadDataType != null)
+                    NodeAttributeEventHandler<NodeId> onReadDataType = OnReadDataType;
+
+                    if (onReadDataType != null)
                     {
-                        result = OnReadDataType(context, this, ref dataType);
+                        result = onReadDataType(context, this, ref dataType);
                     }
 
                     if (ServiceResult.IsGood(result))
@@ -441,9 +460,11 @@ namespace Opc.Ua
                 {
                     int valueRank = m_valueRank;
 
-                    if (OnReadValueRank != null)
+                    NodeAttributeEventHandler<int> onReadValueRank = OnReadValueRank;
+
+                    if (onReadValueRank != null)
                     {
-                        result = OnReadValueRank(context, this, ref valueRank);
+                        result = onReadValueRank(context, this, ref valueRank);
                     }
 
                     if (ServiceResult.IsGood(result))
@@ -458,9 +479,11 @@ namespace Opc.Ua
                 {
                     IList<uint> arrayDimensions = m_arrayDimensions;
 
-                    if (OnReadArrayDimensions != null)
+                    NodeAttributeEventHandler<IList<uint>> onReadArrayDimensions = OnReadArrayDimensions;
+
+                    if (onReadArrayDimensions != null)
                     {
-                        result = OnReadArrayDimensions(context, this, ref arrayDimensions);
+                        result = onReadArrayDimensions(context, this, ref arrayDimensions);
                     }
 
                     if (ServiceResult.IsGood(result))
@@ -484,7 +507,7 @@ namespace Opc.Ua
             QualifiedName dataEncoding,
             ref object value,
             ref DateTime sourceTimestamp)
-        {  
+        {
             value = m_value;
 
             ServiceResult result = ServiceResult.Good;
@@ -514,7 +537,7 @@ namespace Opc.Ua
                     return StatusCodes.BadAttributeIdInvalid;
                 }
             }
-            
+
             // apply the index range and encoding.
             result = BaseVariableState.ApplyIndexRangeAndDataEncoding(context, indexRange, dataEncoding, ref value);
 
@@ -560,9 +583,11 @@ namespace Opc.Ua
                         return StatusCodes.BadNotWritable;
                     }
 
-                    if (OnWriteDataType != null)
+                    NodeAttributeEventHandler<NodeId> onWriteDataType = OnWriteDataType;
+
+                    if (onWriteDataType != null)
                     {
-                        result = OnWriteDataType(context, this, ref dataType);
+                        result = onWriteDataType(context, this, ref dataType);
                     }
 
                     if (ServiceResult.IsGood(result))
@@ -589,14 +614,16 @@ namespace Opc.Ua
 
                     int valueRank = valueRankRef.Value;
 
-                    if (OnWriteValueRank != null)
+                    NodeAttributeEventHandler<int> onWriteValueRank = OnWriteValueRank;
+
+                    if (onWriteValueRank != null)
                     {
-                        result = OnWriteValueRank(context, this, ref valueRank);
+                        result = onWriteValueRank(context, this, ref valueRank);
                     }
 
                     if (ServiceResult.IsGood(result))
                     {
-                       ValueRank = valueRank;
+                        ValueRank = valueRank;
                     }
 
                     return result;
@@ -611,9 +638,11 @@ namespace Opc.Ua
                         return StatusCodes.BadNotWritable;
                     }
 
-                    if (OnWriteArrayDimensions != null)
+                    NodeAttributeEventHandler<IList<uint>> onWriteArrayDimensions = OnWriteArrayDimensions;
+
+                    if (onWriteArrayDimensions != null)
                     {
-                        result = OnWriteArrayDimensions(context, this, ref arrayDimensions);
+                        result = onWriteArrayDimensions(context, this, ref arrayDimensions);
                     }
 
                     if (ServiceResult.IsGood(result))
@@ -697,7 +726,7 @@ namespace Opc.Ua
             return ServiceResult.Good;
         }
         #endregion
-        
+
         #region Private Fields
         private object m_value;
         private NodeId m_dataType;
@@ -713,7 +742,7 @@ namespace Opc.Ua
     {
         #region Constructors
         /// <summary>
-        /// Initializes the type with its defalt attribute values.
+        /// Initializes the type with its default attribute values.
         /// </summary>
         public BaseDataVariableTypeState()
         {
@@ -759,7 +788,7 @@ namespace Opc.Ua
     {
         #region Constructors
         /// <summary>
-        /// Initializes the type with its defalt attribute values.
+        /// Initializes the type with its default attribute values.
         /// </summary>
         public BaseDataVariableTypeState()
         {
@@ -774,7 +803,7 @@ namespace Opc.Ua
         {
             base.Initialize(context);
 
-            Value = default(T);
+            Value = default;
             DataType = TypeInfo.GetDataTypeId(typeof(T));
             ValueRank = TypeInfo.GetValueRank(typeof(T));
         }
@@ -814,7 +843,7 @@ namespace Opc.Ua
     {
         #region Constructors
         /// <summary>
-        /// Initializes the type with its defalt attribute values.
+        /// Initializes the type with its default attribute values.
         /// </summary>
         public PropertyTypeState()
         {
@@ -860,7 +889,7 @@ namespace Opc.Ua
     {
         #region Constructors
         /// <summary>
-        /// Initializes the type with its defalt attribute values.
+        /// Initializes the type with its default attribute values.
         /// </summary>
         public PropertyTypeState()
         {
@@ -875,7 +904,7 @@ namespace Opc.Ua
         {
             base.Initialize(context);
 
-            Value = default(T);
+            Value = default;
             DataType = TypeInfo.GetDataTypeId(typeof(T));
             ValueRank = TypeInfo.GetValueRank(typeof(T));
         }

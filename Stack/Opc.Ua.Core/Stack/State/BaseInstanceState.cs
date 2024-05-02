@@ -23,7 +23,7 @@ namespace Opc.Ua
     {
         #region Constructors
         /// <summary>
-        /// Initializes the instance with its defalt attribute values.
+        /// Initializes the instance with its default attribute values.
         /// </summary>
         protected BaseInstanceState(NodeClass nodeClass, NodeState parent) : base(nodeClass)
         {
@@ -37,9 +37,7 @@ namespace Opc.Ua
         /// </summary>
         protected override void Initialize(ISystemContext context, NodeState source)
         {
-            BaseInstanceState instance = source as BaseInstanceState;
-
-            if (instance != null)
+            if (source is BaseInstanceState instance)
             {
                 m_referenceTypeId = instance.m_referenceTypeId;
                 m_typeDefinitionId = instance.m_typeDefinitionId;
@@ -61,14 +59,11 @@ namespace Opc.Ua
         }
         #endregion
 
-        #region Public Members
-        /// <summary>
-        /// The parent node.
-        /// </summary>
-        public NodeState Parent
+        #region ICloneable Members
+        /// <inheritdoc/>
+        public override object Clone()
         {
-            get { return m_parent; }
-            internal set { m_parent = value; }
+            return this.MemberwiseClone();
         }
 
         /// <summary>
@@ -80,21 +75,18 @@ namespace Opc.Ua
         public new object MemberwiseClone()
         {
             BaseInstanceState clone = new BaseInstanceState(this.NodeClass, this.Parent);
+            return CloneChildren(clone);
+        }
+        #endregion
 
-            if (m_children != null)
-            {
-                clone.m_children = new List<BaseInstanceState>(m_children.Count);
-
-                for (int ii = 0; ii < m_children.Count; ii++)
-                {
-                    BaseInstanceState child = (BaseInstanceState)m_children[ii].MemberwiseClone();
-                    clone.m_children.Add(child);
-                }
-            }
-
-            clone.m_changeMasks = NodeStateChangeMasks.None;
-
-            return clone;
+        #region Public Members
+        /// <summary>
+        /// The parent node.
+        /// </summary>
+        public NodeState Parent
+        {
+            get { return m_parent; }
+            internal set { m_parent = value; }
         }
 
         /// <summary>
@@ -129,7 +121,9 @@ namespace Opc.Ua
         {
             string name = GetNonNullText(this);
 
-            if (m_parent == null)
+            NodeState stateParent = m_parent;
+
+            if (stateParent == null)
             {
                 return name;
             }
@@ -138,14 +132,12 @@ namespace Opc.Ua
 
             if (maxLength > 2)
             {
-                NodeState parent = m_parent;
+                NodeState parent = stateParent;
                 List<string> names = new List<string>();
 
                 while (parent != null)
                 {
-                    BaseInstanceState instance = parent as BaseInstanceState;
-
-                    if (instance == null)
+                    if (!(parent is BaseInstanceState instance))
                     {
                         break;
                     }
@@ -168,7 +160,7 @@ namespace Opc.Ua
                 }
             }
 
-            buffer.Append(GetNonNullText(m_parent));
+            buffer.Append(GetNonNullText(stateParent));
             buffer.Append(seperator);
             buffer.Append(name);
 
@@ -282,10 +274,8 @@ namespace Opc.Ua
             base.ReportEvent(context, e);
 
             // recusively notify the parent.
-            if (m_parent != null)
-            {
-                m_parent.ReportEvent(context, e);
-            }
+            m_parent?.ReportEvent(context, e);
+            
         }
 
         /// <summary>
@@ -382,9 +372,7 @@ namespace Opc.Ua
                     // save the variable value.
                     if (field.AttributeId == Attributes.Value)
                     {
-                        BaseVariableState variable = child as BaseVariableState;
-
-                        if (variable != null && field.AttributeId == Attributes.Value)
+                        if (child is BaseVariableState variable && field.AttributeId == Attributes.Value)
                         {
                             try
                             {
@@ -412,9 +400,7 @@ namespace Opc.Ua
         /// <param name="minimumSamplingInterval">The minimum sampling interval.</param>
         public void SetMinimumSamplingInterval(ISystemContext context, double minimumSamplingInterval)
         {
-            BaseVariableState variable = this as BaseVariableState;
-
-            if (variable != null)
+            if (this is BaseVariableState variable)
             {
                 variable.MinimumSamplingInterval = minimumSamplingInterval;
             }
@@ -434,7 +420,7 @@ namespace Opc.Ua
                 children[ii].SetMinimumSamplingInterval(context, minimumSamplingInterval);
             }
         }
-        #endregion 
+        #endregion
 
         #region IFilterTarget Members
         /// <summary cref="IFilterTarget.IsTypeOf" />
@@ -636,27 +622,27 @@ namespace Opc.Ua
         /// </summary>
         /// <param name="context">The context.</param>
         /// <param name="decoder">The decoder.</param>
-        /// <param name="attibutesToLoad">The attributes to load.</param>
-        public override void Update(ISystemContext context, BinaryDecoder decoder, AttributesToSave attibutesToLoad)
+        /// <param name="attributesToLoad">The attributes to load.</param>
+        public override void Update(ISystemContext context, BinaryDecoder decoder, AttributesToSave attributesToLoad)
         {
-            base.Update(context, decoder, attibutesToLoad);
+            base.Update(context, decoder, attributesToLoad);
 
-            if ((attibutesToLoad & AttributesToSave.ReferenceTypeId) != 0)
+            if ((attributesToLoad & AttributesToSave.ReferenceTypeId) != 0)
             {
                 m_referenceTypeId = decoder.ReadNodeId(null);
             }
 
-            if ((attibutesToLoad & AttributesToSave.TypeDefinitionId) != 0)
+            if ((attributesToLoad & AttributesToSave.TypeDefinitionId) != 0)
             {
                 m_typeDefinitionId = decoder.ReadNodeId(null);
             }
 
-            if ((attibutesToLoad & AttributesToSave.ModellingRuleId) != 0)
+            if ((attributesToLoad & AttributesToSave.ModellingRuleId) != 0)
             {
                 m_modellingRuleId = decoder.ReadNodeId(null);
             }
 
-            if ((attibutesToLoad & AttributesToSave.NumericId) != 0)
+            if ((attributesToLoad & AttributesToSave.NumericId) != 0)
             {
                 m_numericId = decoder.ReadUInt32(null);
             }
@@ -705,29 +691,37 @@ namespace Opc.Ua
         {
             base.PopulateBrowser(context, browser);
 
-            if (!NodeId.IsNull(m_typeDefinitionId) && IsObjectOrVariable)
+            NodeId typeDefinitionId = m_typeDefinitionId;
+
+            if (!NodeId.IsNull(typeDefinitionId) && IsObjectOrVariable)
             {
                 if (browser.IsRequired(ReferenceTypeIds.HasTypeDefinition, false))
                 {
-                    browser.Add(ReferenceTypeIds.HasTypeDefinition, false, m_typeDefinitionId);
+                    browser.Add(ReferenceTypeIds.HasTypeDefinition, false, typeDefinitionId);
                 }
             }
 
-            if (!NodeId.IsNull(m_modellingRuleId))
+            NodeId modellingRuleId = m_modellingRuleId;
+
+            if (!NodeId.IsNull(modellingRuleId))
             {
                 if (browser.IsRequired(ReferenceTypeIds.HasModellingRule, false))
                 {
-                    browser.Add(ReferenceTypeIds.HasModellingRule, false, m_modellingRuleId);
+                    browser.Add(ReferenceTypeIds.HasModellingRule, false, modellingRuleId);
                 }
             }
 
-            if (m_parent != null)
+            NodeState parent = m_parent;
+
+            if (parent != null)
             {
-                if (!NodeId.IsNull(m_referenceTypeId))
+                NodeId referenceTypeId = this.m_referenceTypeId;
+
+                if (!NodeId.IsNull(referenceTypeId))
                 {
-                    if (browser.IsRequired(m_referenceTypeId, true))
+                    if (browser.IsRequired(referenceTypeId, true))
                     {
-                        browser.Add(m_referenceTypeId, true, m_parent);
+                        browser.Add(referenceTypeId, true, parent);
                     }
                 }
             }
